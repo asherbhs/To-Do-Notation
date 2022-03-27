@@ -21,6 +21,14 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- containers
+- brick
+- vty
+- text
+- aeson
+- bytestring
+- microlens
+- microlens-th
 
 library:
   source-dirs: src
@@ -33,6 +41,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Werror
+    - -Wall
     dependencies:
     - todotwo
 

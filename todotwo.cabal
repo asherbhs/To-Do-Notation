@@ -25,17 +25,20 @@ source-repository head
 
 library
   exposed-modules:
-      AppData
-      TodoList
       UI
   other-modules:
       Paths_todotwo
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
+    , bytestring
     , containers
+    , microlens
+    , microlens-th
+    , text
     , vty
   default-language: Haskell2010
 
@@ -45,11 +48,16 @@ executable todotwo-exe
       Paths_todotwo
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Werror -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
+    , bytestring
     , containers
+    , microlens
+    , microlens-th
+    , text
     , todotwo
     , vty
   default-language: Haskell2010
@@ -63,9 +71,14 @@ test-suite todotwo-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
+    , bytestring
     , containers
+    , microlens
+    , microlens-th
+    , text
     , todotwo
     , vty
   default-language: Haskell2010
