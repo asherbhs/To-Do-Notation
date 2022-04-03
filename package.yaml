@@ -29,6 +29,7 @@ dependencies:
 - bytestring
 - microlens
 - microlens-th
+- chessIO
 
 library:
   source-dirs: src

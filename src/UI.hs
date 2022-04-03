@@ -44,7 +44,7 @@ import qualified Graphics.Vty.Input.Events as VtyEvents
 import qualified Data.Aeson as Aeson
 
 -- microlens
-import Lens.Micro 
+import Lens.Micro
     ( (&) -- flipped $
     , (^.) -- view
     , (%~) -- over
@@ -52,6 +52,9 @@ import Lens.Micro
     )
 import qualified Lens.Micro    as Microlens
 import qualified Lens.Micro.TH as MicrolensTH
+
+-- chess
+import qualified Game.Chess as Chess
 
 -- odds and ends
 import Control.Monad (void)
@@ -68,10 +71,10 @@ data Name
     | TodoForm
     deriving (Eq, Ord, Show)
 
-data ScreenName 
+data ScreenName
     = TodoScreen
-    | EventScreen
     | HabitScreen
+    | ScheduleScreen
     | TimelineScreen
     deriving (Eq, Ord, Show)
 
@@ -86,9 +89,9 @@ instance Aeson.ToJSON Todo where
 instance Aeson.FromJSON Todo where
 
 instance Show Todo where
-    show t 
-        = '[' : (if t ^. done then '/' else ' ') : ']' : ' ' 
-        : (Text.unpack $ t ^. name)
+    show t
+        = '[' : (if t ^. done then '/' else ' ') : ']' : ' '
+        : Text.unpack (t ^. name)
 
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo
@@ -98,24 +101,22 @@ data TodoState = TodoState
 
 MicrolensTH.makeLenses '' TodoState
 
-data AppState = AppState 
-    { _screenFocusRing :: BFocus.FocusRing ScreenName
+data AppState = AppState
+    { _debug           :: String
+    , _screenFocusRing :: BFocus.FocusRing ScreenName
     , _todoState       :: TodoState
     }
 
 MicrolensTH.makeLenses '' AppState
 
+getFocusUnsafe :: BFocus.FocusRing n -> n
+getFocusUnsafe = Maybe.fromJust . BFocus.focusGetCurrent
+
 getScreen :: AppState -> ScreenName
-getScreen s 
-    = Maybe.fromJust 
-    $ BFocus.focusGetCurrent 
-    $ s ^. screenFocusRing
+getScreen s = getFocusUnsafe $ s ^. screenFocusRing
 
 getTodoFocus :: AppState -> Name
-getTodoFocus s 
-    = Maybe.fromJust
-    $ BFocus.focusGetCurrent 
-    $ s ^. todoState . todoFocusRing
+getTodoFocus s = getFocusUnsafe $ s ^. todoState . todoFocusRing
 
 data ScreenData = ScreenData
     { draw
@@ -131,8 +132,21 @@ data ScreenData = ScreenData
         -> BTypes.EventM Name (BTypes.Next AppState)
     }
 
-defaultHorizontalLimit = 72
-defaultVerticalLimit   = 32
+screenBox :: AppState -> [BTypes.Widget Name] -> BTypes.Widget Name
+screenBox s = BWCentre.center
+    . BWCore.withBorderStyle BWBStyle.unicodeBold
+    . BWBorder.borderWithLabel
+        (BWCore.str $ " " ++ screenLabel ++ " ") -- s ^. debug
+    . BWCore.padTopBottom 1
+    . BWCore.padLeftRight 3
+    -- . BWCore.hLimit 72
+    -- . BWCore.vLimit 32
+    . BWCore.vBox
+  where
+    screenLabel = case getScreen s of
+        TodoScreen  -> "To-do Notation"
+        HabitScreen -> "Habit Tracker"
+        _           -> "..."
 
 screenMap :: Map ScreenName ScreenData
 screenMap = Map.fromList
@@ -143,6 +157,13 @@ screenMap = Map.fromList
             , handleEvent  = todoHandleEvent
             }
       )
+    , ( HabitScreen
+      , ScreenData
+            { draw         = habitDraw
+            , chooseCursor = habitChooseCursor
+            , handleEvent  = habitHandleEvent
+            }
+      )
     ]
 
 emptyTodoForm :: BForms.Form Todo () Name
@@ -151,7 +172,7 @@ emptyTodoForm = BForms.newForm
     $ Todo "" False
 
 defAttrMap :: AppState -> BAttr.AttrMap
-defAttrMap _ = BAttr.attrMap VtyAttr.defAttr 
+defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
     [ ( BWList.listSelectedFocusedAttr
       , defaultStandout
       )
@@ -159,21 +180,31 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
   where
     defaultStandout = VtyAttr.withStyle VtyAttr.defAttr VtyAttr.standout
 
-defaultHandleEvent 
-    :: AppState 
-    -> BTypes.BrickEvent Name AppEvent 
+defaultHandleEvent
+    :: AppState
+    -> BTypes.BrickEvent Name AppEvent
     -> BTypes.EventM Name (BTypes.Next AppState)
 defaultHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey (VtyEvents.KChar 'c') [VtyEvents.MCtrl] -> BMain.halt s
+    VtyEvents.EvKey VtyEvents.KBackTab [] -> BMain.continue
+        $ s
+        & screenFocusRing
+        %~ BFocus.focusNext
     e -> handleEvent (screenMap ! getScreen s) s (BTypes.VtyEvent e)
 
 defaultHandleEvent s e = handleEvent (screenMap ! getScreen s) s e
 
+debugHandleEvent
+    :: AppState
+    -> BTypes.BrickEvent Name AppEvent
+    -> BTypes.EventM Name (BTypes.Next AppState)
+debugHandleEvent s e = defaultHandleEvent (s & debug .~ show e) e
+
 app :: BMain.App AppState AppEvent Name
 app = BMain.App
-    { BMain.appDraw         = (\s -> draw (getScreenData s) s)
-    , BMain.appChooseCursor = (\s -> chooseCursor (getScreenData s) s)
-    , BMain.appHandleEvent  = defaultHandleEvent
+    { BMain.appDraw         = \s -> draw         (getScreenData s) s
+    , BMain.appChooseCursor = \s -> chooseCursor (getScreenData s) s
+    , BMain.appHandleEvent  = debugHandleEvent
     , BMain.appStartEvent   = return
     , BMain.appAttrMap      = defAttrMap
     }
@@ -184,16 +215,18 @@ ui :: IO ()
 ui = void $ do
     json <- ByteString.readFile "todos"
 
-    finalState <- BMain.defaultMain app AppState 
-        { _screenFocusRing = BFocus.focusRing
+    finalState <- BMain.defaultMain app AppState
+        { _debug = "start"
+        , _screenFocusRing = BFocus.focusRing
             [ TodoScreen
+            , HabitScreen
             ]
         , _todoState = TodoState
-            { _todoList = BWList.list 
+            { _todoList = BWList.list
                 TodoList
-                ( Maybe.maybe 
-                    Seq.empty 
-                    id 
+                (
+                Maybe.fromMaybe
+                    Seq.empty
                     $ Aeson.decode json
                 )
                 1
@@ -202,38 +235,31 @@ ui = void $ do
             }
         }
 
-    ByteString.writeFile "todos" 
-        $ Aeson.encode 
-        $ BWList.listElements 
+    ByteString.writeFile "todos"
+        $ Aeson.encode
+        $ BWList.listElements
         $ finalState ^. todoState . todoList
 
 -- todo list stuff -------------------------------------------------------------
 
 todoDraw :: AppState -> [BTypes.Widget Name]
-todoDraw s = 
-    [ BWCentre.center
-    $ BWCore.withBorderStyle BWBStyle.unicodeBold
-    $ BWBorder.borderWithLabel (BWCore.str "To-do Notation")
-    $ BWCore.padTopBottom 1
-    $ BWCore.padLeftRight 3
-    $ BWCore.hLimit defaultHorizontalLimit
-    $ BWCore.vLimit defaultVerticalLimit
-    $ BWCore.vBox $
+todoDraw s =
+    [ screenBox s
         [ BWList.renderList
-            (const $ BWCore.str . show) 
+            (const $ BWCore.str . show)
             (getTodoFocus s == TodoList)
             (s ^. todoState . todoList)
 
-        , BWCore.padTopBottom 1 
-        $ BWCore.withBorderStyle BWBStyle.unicode
-        $ BWBorder.hBorderWithLabel (BWCore.str "New To-do")
+        , BWCore.padTopBottom 1
+            $ BWCore.withBorderStyle BWBStyle.unicode
+            $ BWBorder.hBorderWithLabel (BWCore.str "New To-do")
 
         , BForms.renderForm $ s ^. todoState . todoForm
         ]
     ]
 
-todoChooseCursor 
-    :: AppState 
+todoChooseCursor
+    :: AppState
     -> [BTypes.CursorLocation Name]
     -> Maybe (BTypes.CursorLocation Name)
 todoChooseCursor s [l] = case l ^. BTypes.cursorLocationNameL of
@@ -247,23 +273,26 @@ todoListHandleEvent
     -> BTypes.EventM Name (BTypes.Next AppState)
 todoListHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey (VtyEvents.KChar ' ') [] -> BMain.continue
-        $ s 
+        $ s
         & todoState . todoList
         %~ BWList.listModify
         (done %~ not)
 
-    VtyEvents.EvKey (VtyEvents.KBS) [] -> BMain.continue
+    VtyEvents.EvKey VtyEvents.KBS [] -> BMain.continue
         $ s
         & todoState . todoList
         %~ \l -> case BWList.listSelected l of
             Just i  -> BWList.listRemove i l
             Nothing -> l
 
-    e -> do 
-        newTodoList <- BWList.handleListEvent e (s ^. todoState . todoList)
-        BMain.continue 
-            $ s 
-            & todoState . todoList 
+    e -> do
+        newTodoList <- BWList.handleListEventVi
+            BWList.handleListEvent
+            e
+            (s ^. todoState . todoList)
+        BMain.continue
+            $ s
+            & todoState . todoList
             .~ newTodoList
 
 todoListHandleEvent s _ = BMain.continue s
@@ -273,12 +302,12 @@ todoFormHandleEvent
     -> BTypes.BrickEvent Name AppEvent
     -> BTypes.EventM Name (BTypes.Next AppState)
 todoFormHandleEvent s (BTypes.VtyEvent e) = case e of
-    VtyEvents.EvKey (VtyEvents.KEnter) [] -> BMain.continue
-        $ case newTodo ^. name of
+    VtyEvents.EvKey VtyEvents.KEnter [] -> BMain.continue $
+        case newTodo ^. name of
             "" -> s
-            _  -> s 
+            _  -> s
                 & todoState . todoList
-                %~ 
+                %~
                 ( \l -> BWList.listMoveToEnd $ BWList.listInsert
                     (length $ BWList.listElements l)
                     newTodo
@@ -289,10 +318,10 @@ todoFormHandleEvent s (BTypes.VtyEvent e) = case e of
                 .~ emptyTodoForm
 
     e -> do
-        newForm <- BForms.handleFormEvent 
+        newForm <- BForms.handleFormEvent
             (BTypes.VtyEvent e)
             (s ^. todoState . todoForm)
-        BMain.continue 
+        BMain.continue
             $ s
             & todoState . todoForm
             .~ newForm
@@ -314,5 +343,27 @@ todoHandleEvent s (BTypes.VtyEvent e) = case e of
     e -> case getTodoFocus s of
         TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
         TodoForm -> todoFormHandleEvent s (BTypes.VtyEvent e)
+        _        -> BMain.continue s
 
 todoHandleEvent s _ = BMain.continue s
+
+-- habit stuff -----------------------------------------------------------------
+
+habitDraw :: AppState -> [BTypes.Widget Name]
+habitDraw s =
+    [ screenBox s
+        [ BWCore.str "habitss"
+        ]
+    ]
+
+habitChooseCursor
+     :: AppState
+    -> [BTypes.CursorLocation Name]
+    -> Maybe (BTypes.CursorLocation Name)
+habitChooseCursor _ _ = Nothing
+
+habitHandleEvent
+    :: AppState
+    -> BTypes.BrickEvent Name AppEvent
+    -> BTypes.EventM Name (BTypes.Next AppState)
+habitHandleEvent s _ = BMain.continue s
