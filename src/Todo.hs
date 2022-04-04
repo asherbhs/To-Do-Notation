@@ -37,8 +37,10 @@ import qualified Lens.Micro.TH as MicrolensTH
 
 emptyForm :: BForms.Form Types.Todo () Types.Name
 emptyForm = BForms.newForm
-    [(BWCore.str ">>= " <+>) @@= BForms.editTextField Types.name Types.TodoForm (Just 1)]
-    $ Types.Todo "" False
+    [ (BWCore.str ">>= " <+>) 
+        @@= BForms.editTextField Types.todoName Types.TodoForm (Just 1)
+    ]
+    $ Types.Todo "" False Types.NormalPriority
 
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
 draw s =
@@ -74,7 +76,7 @@ todoListHandleEvent s (BTypes.VtyEvent e) = case e of
         $ s
         & Types.todoState . Types.todoList
         %~ BWList.listModify
-        (Types.done %~ not)
+        (Types.todoDone %~ not)
 
     VtyEvents.EvKey VtyEvents.KBS [] -> BMain.continue
         $ s
@@ -101,7 +103,7 @@ todoFormHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 todoFormHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey VtyEvents.KEnter [] -> BMain.continue $
-        case newTodo ^. Types.name of
+        case newTodo ^. Types.todoName of
             "" -> s
             _  -> s
                 & Types.todoState . Types.todoList

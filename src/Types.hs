@@ -54,9 +54,15 @@ data ScreenName
     | TimelineScreen
     deriving (Eq, Ord, Show)
 
+data Priority = NormalPriority | HighPriority deriving (Eq, Generic)
+
+instance Aeson.ToJSON Priority where
+instance Aeson.FromJSON Priority where
+
 data Todo = Todo
-    { _name :: Text
-    , _done :: Bool
+    { _todoName     :: Text
+    , _todoDone     :: Bool
+    , _todoPriority :: Priority
     } deriving (Eq, Generic)
 
 MicrolensTH.makeLenses '' Todo
@@ -66,8 +72,8 @@ instance Aeson.FromJSON Todo where
 
 instance Show Todo where
     show t
-        = '[' : (if t ^. done then '/' else ' ') : ']' : ' '
-        : Text.unpack (t ^. name)
+        = '[' : (if t ^. todoDone then '/' else ' ') : ']' : ' '
+        : Text.unpack (t ^. todoName)
 
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo

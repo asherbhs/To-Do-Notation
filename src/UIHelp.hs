@@ -18,6 +18,17 @@ import qualified Brick.Widgets.Border       as BWBorder
 import qualified Brick.Widgets.Border.Style as BWBStyle
 import qualified Brick.Widgets.List         as BWList
 
+
+-- microlens
+import Lens.Micro
+    ( (&) -- flipped $
+    , (^.) -- view
+    , (%~) -- over
+    , (.~) -- set
+    )
+import qualified Lens.Micro    as Microlens
+import qualified Lens.Micro.TH as MicrolensTH
+
 screenBox
     :: Types.AppState
     -> [BTypes.Widget Types.Name]
@@ -25,7 +36,7 @@ screenBox
 screenBox s = BWCentre.center
     . BWCore.withBorderStyle BWBStyle.unicodeBold
     . BWBorder.borderWithLabel
-        (BWCore.str $ " " ++ screenLabel ++ " ") -- s ^. debug
+        (BWCore.str $ " " ++ s ^. Types.debug ++ " ")
     . BWCore.padTopBottom 1
     . BWCore.padLeftRight 3
     -- . BWCore.hLimit 72
