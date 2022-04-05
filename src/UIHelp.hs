@@ -18,7 +18,6 @@ import qualified Brick.Widgets.Border       as BWBorder
 import qualified Brick.Widgets.Border.Style as BWBStyle
 import qualified Brick.Widgets.List         as BWList
 
-
 -- microlens
 import Lens.Micro
     ( (&) -- flipped $

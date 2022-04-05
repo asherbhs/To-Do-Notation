@@ -35,13 +35,6 @@ import Lens.Micro
 import qualified Lens.Micro    as Microlens
 import qualified Lens.Micro.TH as MicrolensTH
 
-emptyForm :: BForms.Form Types.Todo () Types.Name
-emptyForm = BForms.newForm
-    [ (BWCore.str ">>= " <+>) 
-        @@= BForms.editTextField Types.todoName Types.TodoForm (Just 1)
-    ]
-    $ Types.Todo "" False 0
-
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
 draw s =
     [ UIHelp.screenBox s
@@ -49,12 +42,6 @@ draw s =
             (const $ BWCore.str . show)
             (Types.getTodoFocus s == Types.TodoList)
             (s ^. Types.todoState . Types.todoList)
-
-        , BWCore.padTopBottom 1
-            $ BWCore.withBorderStyle BWBStyle.unicode
-            $ BWBorder.hBorderWithLabel (BWCore.str "New To-do")
-
-        , BForms.renderForm $ s ^. Types.todoState . Types.todoForm
         ]
     ]
 
@@ -63,8 +50,8 @@ chooseCursor
     -> [BTypes.CursorLocation Types.Name]
     -> Maybe (BTypes.CursorLocation Types.Name)
 chooseCursor s [l] = case l ^. BTypes.cursorLocationNameL of
-    Just Types.TodoForm -> if Types.getTodoFocus s == Types.TodoForm then Just l else Nothing
-    _ -> Nothing
+    Just _ -> Nothing
+    _      -> Nothing
 chooseCursor _ _   = Nothing
 
 todoListHandleEvent
@@ -97,39 +84,6 @@ todoListHandleEvent s (BTypes.VtyEvent e) = case e of
 
 todoListHandleEvent s _ = BMain.continue s
 
-todoFormHandleEvent
-    :: Types.AppState
-    -> BTypes.BrickEvent Types.Name Types.AppEvent
-    -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
-todoFormHandleEvent s (BTypes.VtyEvent e) = case e of
-    VtyEvents.EvKey VtyEvents.KEnter [] -> BMain.continue $
-        case newTodo ^. Types.todoName of
-            "" -> s
-            _  -> s
-                & Types.todoState . Types.todoList
-                %~
-                ( \l -> BWList.listMoveToEnd $ BWList.listInsert
-                    (length $ BWList.listElements l)
-                    newTodo
-                    l
-                )
-
-                & Types.todoState . Types.todoForm
-                .~ emptyForm
-
-    e -> do
-        newForm <- BForms.handleFormEvent
-            (BTypes.VtyEvent e)
-            (s ^. Types.todoState . Types.todoForm)
-        BMain.continue
-            $ s
-            & Types.todoState . Types.todoForm
-            .~ newForm
-  where
-    newTodo = BForms.formState $ s ^. Types.todoState . Types.todoForm
-
-todoFormHandleEvent s _ = BMain.continue s
-
 handleEvent
     :: Types.AppState
     -> BTypes.BrickEvent Types.Name Types.AppEvent
@@ -142,7 +96,6 @@ handleEvent s (BTypes.VtyEvent e) = case e of
 
     e -> case Types.getTodoFocus s of
         Types.TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
-        Types.TodoForm -> todoFormHandleEvent s (BTypes.VtyEvent e)
         _              -> BMain.continue s
 
 handleEvent s _ = BMain.continue s

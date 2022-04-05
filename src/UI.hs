@@ -30,8 +30,6 @@ import qualified Brick.Main    as BMain
 import qualified Brick.Types   as BTypes
 import qualified Brick.AttrMap as BAttr
 import qualified Brick.Focus   as BFocus
-import           Brick.Forms ((@@=))
-import qualified Brick.Forms   as BForms
 
 import           Brick.Widgets.Core ((<+>))
 import qualified Brick.Widgets.Core         as BWCore
@@ -140,8 +138,7 @@ ui = void $ do
                     $ Aeson.decode json
                 )
                 1
-            , Types._todoForm = Todo.emptyForm
-            , Types._todoFocusRing = BFocus.focusRing [Types.TodoList, Types.TodoForm]
+            , Types._todoFocusRing = BFocus.focusRing [Types.TodoList]
             }
         }
 

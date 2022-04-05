@@ -45,7 +45,6 @@ type AppEvent = ()
 data Name
     = None
     | TodoList
-    | TodoForm
     deriving (Eq, Ord, Show)
 
 data ScreenName
@@ -77,7 +76,6 @@ instance Show Todo where
 -- app state
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo
-    , _todoForm      :: BForms.Form Todo () Name
     , _todoFocusRing :: BFocus.FocusRing Name
     }
 
