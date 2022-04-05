@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Habit
+      Parser
       Todo
       Types
       UI
@@ -39,8 +40,8 @@ library
     , base >=4.7 && <5
     , brick
     , bytestring
-    , chessIO
     , containers
+    , megaparsec
     , microlens
     , microlens-th
     , text
@@ -59,8 +60,8 @@ executable todotwo-exe
     , base >=4.7 && <5
     , brick
     , bytestring
-    , chessIO
     , containers
+    , megaparsec
     , microlens
     , microlens-th
     , text
@@ -81,8 +82,8 @@ test-suite todotwo-test
     , base >=4.7 && <5
     , brick
     , bytestring
-    , chessIO
     , containers
+    , megaparsec
     , microlens
     , microlens-th
     , text

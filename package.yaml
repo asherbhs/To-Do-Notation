@@ -29,7 +29,7 @@ dependencies:
 - bytestring
 - microlens
 - microlens-th
-- chessIO
+- megaparsec
 
 library:
   source-dirs: src

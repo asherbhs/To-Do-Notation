@@ -39,6 +39,7 @@ import qualified Data.Maybe as Maybe
 
 -- new data types --------------------------------------------------------------
 
+-- name types
 type AppEvent = ()
 
 data Name
@@ -54,15 +55,12 @@ data ScreenName
     | TimelineScreen
     deriving (Eq, Ord, Show)
 
-data Priority = NormalPriority | HighPriority deriving (Eq, Generic)
-
-instance Aeson.ToJSON Priority where
-instance Aeson.FromJSON Priority where
+-- todo stuff
 
 data Todo = Todo
     { _todoName     :: Text
     , _todoDone     :: Bool
-    , _todoPriority :: Priority
+    , _todoPriority :: Int
     } deriving (Eq, Generic)
 
 MicrolensTH.makeLenses '' Todo
@@ -74,7 +72,9 @@ instance Show Todo where
     show t
         = '[' : (if t ^. todoDone then '/' else ' ') : ']' : ' '
         : Text.unpack (t ^. todoName)
+        ++ " " ++ show (t ^. todoPriority)
 
+-- app state
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo
     , _todoForm      :: BForms.Form Todo () Name
@@ -104,6 +104,24 @@ data ScreenData = ScreenData
         -> BTypes.BrickEvent Name AppEvent
         -> BTypes.EventM Name (BTypes.Next AppState)
     }
+
+-- commands
+
+data CommandName
+    =  NewTodoCommandName
+    | MarkTodoCommandName
+
+data Command
+    = NewTodoCommand
+        { newTodoName     :: Text
+        , newTodoPriority :: Int
+        } 
+    | MarkTodoCommand
+        { markTodoName :: Text
+        , markTodoDone :: Bool
+        } 
+    deriving (Show)
+
 
 -- utility functions -----------------------------------------------------------
 

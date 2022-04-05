@@ -40,7 +40,7 @@ emptyForm = BForms.newForm
     [ (BWCore.str ">>= " <+>) 
         @@= BForms.editTextField Types.todoName Types.TodoForm (Just 1)
     ]
-    $ Types.Todo "" False Types.NormalPriority
+    $ Types.Todo "" False 0
 
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
 draw s =
@@ -143,6 +143,6 @@ handleEvent s (BTypes.VtyEvent e) = case e of
     e -> case Types.getTodoFocus s of
         Types.TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
         Types.TodoForm -> todoFormHandleEvent s (BTypes.VtyEvent e)
-        _        -> BMain.continue s
+        _              -> BMain.continue s
 
 handleEvent s _ = BMain.continue s

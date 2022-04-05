@@ -3,14 +3,7 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: chessIO-0.9.3.0@sha256:9c6595def4d6615503d1b78aef51749522f6f77aac7eb8643b0d1c22d018a4a9,5044
-    pantry-tree:
-      size: 1407
-      sha256: 1f03d56ea18b293f37e42122c8ed71ed4e1d9ea1a13285eea272083edbb082cb
-  original:
-    hackage: chessIO-0.9.3.0
+packages: []
 snapshots:
 - completed:
     size: 616897
