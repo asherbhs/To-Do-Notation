@@ -58,15 +58,12 @@ draw s =
     drawTodo _ t 
         = case t ^. Types.todoPriority of
             2 -> BWCore.withAttr Types.highPriorityAttr 
-                $ BWCore.str 
-                $ Util.padRight "!" width ' '
+                $ BWCore.str " ! "
             1 -> BWCore.withAttr Types.mediumPriorityAttr
-                $ BWCore.str 
-                $ Util.padRight ":" width ' '
+                $ BWCore.str " : "
             0 -> BWCore.withAttr Types.lowPriorityAttr
-                $ BWCore.str 
-                $ Util.padRight "." width ' '
-            n -> BWCore.str $ Util.padRight (show n) width ' '
+                $ BWCore.str " . "
+            n -> BWCore.str $ " " ++ show n ++ " "
         <+> BWCore.str (show t)
     width = 2
 

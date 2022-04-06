@@ -58,9 +58,9 @@ priorityLexer :: Parser Int
 priorityLexer = myLexer 
     (
         Lexer.decimal <|> Parsec.choice
-            [ 2 <$ (CharParsec.string' "h" <|> CharParsec.string' "high")
-            , 1 <$ (CharParsec.string' "m" <|> CharParsec.string' "medium")
-            , 0 <$ (CharParsec.string' "l" <|> CharParsec.string' "low")
+            [ 2 <$ (CharParsec.string' "high" <|> CharParsec.string' "h")
+            , 1 <$ (CharParsec.string' "medium" <|> CharParsec.string' "m")
+            , 0 <$ (CharParsec.string' "low" <|> CharParsec.string' "l")
             ]
     ) <?> "a priority (e.g. \"high\", \"h\", 2)"
 
