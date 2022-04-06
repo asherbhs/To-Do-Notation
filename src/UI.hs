@@ -62,6 +62,7 @@ import Control.Monad (void)
 import qualified Data.Maybe as Maybe
 import qualified Data.Bool  as Bool
 import Data.CircularList (insertR)
+import Data.Text.Zipper (gotoEOL)
 
 -- stuff used  -----------------------------------------------------------------
 
@@ -153,40 +154,34 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
             & Types.previousCommandIndex
             %~ (\i -> min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
 
-            & (\s' -> 
-                (
-                    Types.commandPrompt .~ 
-                        if s' ^. Types.previousCommandIndex == -1 
-                        then emptyCommandPrompt
-                        else defaultCommandPrompt 
-                            (
-                                Seq.index
-                                (s' ^. Types.previousCommands)
-                                (s' ^. Types.previousCommandIndex)
-                            )
-                )
-                s'
-            )
+            & loadOldCommand
         VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue
             $ s
             & Types.previousCommandIndex
             %~ (\i -> max (i - 1) (-1))
 
-            & Types.commandPrompt
-            .~ if s ^. Types.previousCommandIndex == -1 
-                then emptyCommandPrompt
-                else defaultCommandPrompt 
-                    (
-                        Seq.index
-                        (s ^. Types.previousCommands)
-                        (s ^. Types.previousCommandIndex)
-                    )
+            & loadOldCommand
         _ -> do
             newEditor <- BWEdit.handleEditorEvent e $ s ^. Types.commandPrompt
             BMain.continue
                 $ s
                 & Types.commandPrompt
                 .~ newEditor
+  where
+    loadOldCommand s' = (
+            Types.commandPrompt .~
+                if s' ^. Types.previousCommandIndex == -1
+                then emptyCommandPrompt
+                else defaultCommandPrompt
+                    (
+                        Seq.index
+                        (s' ^. Types.previousCommands)
+                        (s' ^. Types.previousCommandIndex)
+                    )
+            & BWEdit.editContentsL
+            %~ gotoEOL
+        )
+        s'
 commandPromptHandleEvent s e = screenHandleEvent s e
 
 defaultHandleCommand

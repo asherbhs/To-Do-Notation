@@ -123,15 +123,6 @@ handleCommand
     -> Types.Command
     -> Types.AppState
 handleCommand s (Types.NewTodoCommand n p)
-    -- = s
-    -- & Types.todoState . Types.todoList
-    -- %~ BWList.listMoveToEnd . BWList.listInsert
-    --     (
-    --         Seq.length 
-    --             $ BWList.listElements 
-    --             $ s ^. Types.todoState . Types.todoList
-    --     )
-    --     (Types.Todo n False p)
     = s
     & Types.todoState . Types.todoList . BWList.listElementsL 
     %~ \l -> Seq.insertAt 

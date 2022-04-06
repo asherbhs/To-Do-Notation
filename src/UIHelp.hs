@@ -41,7 +41,10 @@ screenBox
 screenBox s ws 
     = BWCentre.center
     $ BWCore.withBorderStyle BWBStyle.unicodeBold
-    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") -- s ^. Types.debug
+    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") 
+        -- screenLabel
+        -- s ^. Types.debug
+        -- show (s ^. Types.previousCommandIndex) ++ " " ++ show (s ^. Types.previousCommands)
     $ BWCore.padLeftRight 2
     $ BWCore.padTopBottom (round $ approxFontRatio * 2.0)
     $ BWCore.hLimit (round hlim)

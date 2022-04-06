@@ -31,6 +31,7 @@ dependencies:
 - microlens-th
 - megaparsec
 - data-clist
+- text-zipper
 
 library:
   source-dirs: src
