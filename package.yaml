@@ -30,6 +30,7 @@ dependencies:
 - microlens
 - microlens-th
 - megaparsec
+- data-clist
 
 library:
   source-dirs: src

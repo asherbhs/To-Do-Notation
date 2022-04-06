@@ -5,6 +5,7 @@ import qualified UIHelp
 
 import qualified Brick.Types        as BTypes
 import qualified Brick.Main         as BMain
+import qualified Brick.Focus        as BFocus
 import qualified Brick.Widgets.Core as BWCore
 
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
@@ -25,3 +26,12 @@ handleEvent
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 handleEvent s _ = BMain.continue s
+
+handleCommand
+    :: Types.AppState 
+    -> Types.Command
+    -> Types.AppState
+handleCommand = const
+
+focusRing :: BFocus.FocusRing Types.Name
+focusRing = BFocus.focusRing [Types.HabitList]

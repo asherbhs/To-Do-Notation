@@ -15,6 +15,7 @@ import Text.Megaparsec.Char.Lexer as Lexer
 -- misc
 import Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Maybe as Maybe
 import Data.Void (Void)
 import Data.Char (isSpace)
 
@@ -51,14 +52,24 @@ wordLexer = myLexer $
 intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
 
-boolLexer :: Parser Bool
-boolLexer = myLexer $ Parsec.choice 
+priorityLexer :: Parser Int
+priorityLexer = myLexer $ Lexer.decimal <|> Parsec.choice
+    [ 2 <$ (CharParsec.string' "h" <|> CharParsec.string' "high")
+    , 1 <$ (CharParsec.string' "m" <|> CharParsec.string' "medium")
+    , 0 <$ (CharParsec.string' "l" <|> CharParsec.string' "low")
+    ]
+
+boolParser :: Parser Bool
+boolParser = Parsec.choice 
     [ True  <$ CharParsec.string' "true"
     , False <$ CharParsec.string' "false"
     ]
 
+boolLexer :: Parser Bool
+boolLexer = myLexer boolParser
+
 doneLexer :: Parser Bool
-doneLexer = myLexer $ boolLexer <|> True  <$ CharParsec.string' "done"
+doneLexer = myLexer $ boolParser <|> True <$ CharParsec.string' "done"
 
 parseCommand :: Text -> Either Text Types.Command
 parseCommand t = case Parsec.parse commandParser "" t of
@@ -81,11 +92,13 @@ commandNameParser = myLexer $ Parsec.choice
 parseNewTodo :: Parser Types.Command
 parseNewTodo = do
     n <- wordLexer
-    p <- intLexer
-    return $ Types.NewTodoCommand n p
+    p <- Parsec.optional priorityLexer
+    Parsec.eof
+    return $ Types.NewTodoCommand n $ Maybe.fromMaybe 1 p
 
 parseMarkTodo :: Parser Types.Command
 parseMarkTodo = do
     n <- wordLexer
     d <- doneLexer
+    Parsec.eof
     return $ Types.MarkTodoCommand n d

@@ -18,8 +18,10 @@ import qualified Data.Sequence as Seq
 -- brick
 import qualified Brick.Types        as BTypes
 import qualified Brick.Widgets.List as BWList
+import qualified Brick.Widgets.Edit as BWEdit
 import qualified Brick.Forms        as BForms
 import qualified Brick.Focus        as BFocus
+import qualified Brick.AttrMap      as BAttr
 
 -- microlens
 import Lens.Micro
@@ -44,7 +46,9 @@ type AppEvent = ()
 
 data Name
     = None
+    | CommandPrompt
     | TodoList
+    | HabitList
     deriving (Eq, Ord, Show)
 
 data ScreenName
@@ -71,7 +75,7 @@ instance Show Todo where
     show t
         = '[' : (if t ^. todoDone then '/' else ' ') : ']' : ' '
         : Text.unpack (t ^. todoName)
-        ++ " " ++ show (t ^. todoPriority)
+        -- ++ " " ++ show (t ^. todoPriority)
 
 -- app state
 data TodoState = TodoState
@@ -83,7 +87,10 @@ MicrolensTH.makeLenses '' TodoState
 
 data AppState = AppState
     { _debug           :: String
+    , _widgetFocusRing :: BFocus.FocusRing Name
     , _screenFocusRing :: BFocus.FocusRing ScreenName
+    , _commandPrompt   :: BWEdit.Editor Text Name
+    , _errorMessage    :: Text
     , _todoState       :: TodoState
     }
 
@@ -101,12 +108,17 @@ data ScreenData = ScreenData
         :: AppState
         -> BTypes.BrickEvent Name AppEvent
         -> BTypes.EventM Name (BTypes.Next AppState)
+    , handleCommand
+        :: AppState 
+        -> Command
+        -> AppState
+    , focusRing :: BFocus.FocusRing Name
     }
 
 -- commands
 
 data CommandName
-    =  NewTodoCommandName
+    = NewTodoCommandName
     | MarkTodoCommandName
 
 data Command
@@ -120,7 +132,6 @@ data Command
         } 
     deriving (Show)
 
-
 -- utility functions -----------------------------------------------------------
 
 getFocusUnsafe :: BFocus.FocusRing n -> n
@@ -129,5 +140,16 @@ getFocusUnsafe = Maybe.fromJust . BFocus.focusGetCurrent
 getScreen :: AppState -> ScreenName
 getScreen s = getFocusUnsafe $ s ^. screenFocusRing
 
-getTodoFocus :: AppState -> Name
-getTodoFocus s = getFocusUnsafe $ s ^. todoState . todoFocusRing
+getWidgetFocus :: AppState -> Name
+getWidgetFocus s = getFocusUnsafe $ s ^. widgetFocusRing
+
+-- attribute names -------------------------------------------------------------
+
+highPriorityAttr :: BAttr.AttrName
+highPriorityAttr = BAttr.attrName "high"
+
+mediumPriorityAttr :: BAttr.AttrName
+mediumPriorityAttr = BAttr.attrName "medium"
+
+lowPriorityAttr :: BAttr.AttrName
+lowPriorityAttr = BAttr.attrName "low"

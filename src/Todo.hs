@@ -6,6 +6,7 @@ module Todo where
 -- internal
 import qualified Types
 import qualified UIHelp
+import qualified Util
 
 -- brick
 import qualified Brick.Main    as BMain
@@ -35,23 +36,44 @@ import Lens.Micro
 import qualified Lens.Micro    as Microlens
 import qualified Lens.Micro.TH as MicrolensTH
 
+-- sequence
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+
+-- misc
+import qualified Data.Maybe as Maybe
+
+--------------------------------------------------------------------------------
+
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
 draw s =
     [ UIHelp.screenBox s
         [ BWList.renderList
-            (const $ BWCore.str . show)
-            (Types.getTodoFocus s == Types.TodoList)
+            drawTodo
+            (Types.getWidgetFocus s == Types.TodoList)
             (s ^. Types.todoState . Types.todoList)
         ]
     ]
+  where
+    drawTodo _ t 
+        = case t ^. Types.todoPriority of
+            2 -> BWCore.withAttr Types.highPriorityAttr 
+                $ BWCore.str 
+                $ Util.padRight "!" width ' '
+            1 -> BWCore.withAttr Types.mediumPriorityAttr
+                $ BWCore.str 
+                $ Util.padRight ":" width ' '
+            0 -> BWCore.withAttr Types.lowPriorityAttr
+                $ BWCore.str 
+                $ Util.padRight "." width ' '
+            n -> BWCore.str $ Util.padRight (show n) width ' '
+        <+> BWCore.str (show t)
+    width = 2
 
 chooseCursor
     :: Types.AppState
     -> [BTypes.CursorLocation Types.Name]
     -> Maybe (BTypes.CursorLocation Types.Name)
-chooseCursor s [l] = case l ^. BTypes.cursorLocationNameL of
-    Just _ -> Nothing
-    _      -> Nothing
 chooseCursor _ _   = Nothing
 
 todoListHandleEvent
@@ -88,14 +110,40 @@ handleEvent
     :: Types.AppState
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
-handleEvent s (BTypes.VtyEvent e) = case e of
-    VtyEvents.EvKey (VtyEvents.KChar '\t') [] -> BMain.continue
-        $ s
-        & Types.todoState . Types.todoFocusRing
-        %~ BFocus.focusNext
+handleEvent = todoListHandleEvent
+-- handleEvent s (BTypes.VtyEvent e) = case e of
+--     e -> case Types.getWidgetFocus s of
+--         Types.TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
+--         _              -> BMain.continue s
 
-    e -> case Types.getTodoFocus s of
-        Types.TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
-        _              -> BMain.continue s
+-- handleEvent s _ = BMain.continue s
 
-handleEvent s _ = BMain.continue s
+handleCommand
+    :: Types.AppState 
+    -> Types.Command
+    -> Types.AppState
+handleCommand s (Types.NewTodoCommand n p)
+    -- = s
+    -- & Types.todoState . Types.todoList
+    -- %~ BWList.listMoveToEnd . BWList.listInsert
+    --     (
+    --         Seq.length 
+    --             $ BWList.listElements 
+    --             $ s ^. Types.todoState . Types.todoList
+    --     )
+    --     (Types.Todo n False p)
+    = s
+    & Types.todoState . Types.todoList . BWList.listElementsL 
+    %~ \l -> Seq.insertAt 
+            (
+                Maybe.fromMaybe 
+                    (Seq.length l) 
+                    (Seq.findIndexL (\t -> t ^. Types.todoPriority < p) l)
+            ) 
+            (Types.Todo n False p) l
+
+handleCommand s (Types.MarkTodoCommand n d) = undefined
+handleCommand s _ = s
+
+focusRing :: BFocus.FocusRing Types.Name
+focusRing = BFocus.focusRing [Types.TodoList]
