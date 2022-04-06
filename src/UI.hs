@@ -99,7 +99,7 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
     [ ( BWList.listSelectedFocusedAttr
       , defaultStandout
       )
-    , ( Types.superHighPriorityAttr 
+    , ( Types.urgentPriorityAttr 
       , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightMagenta
       )
     , ( Types.highPriorityAttr
@@ -119,6 +119,7 @@ defaultChooseCursor
     :: Types.AppState
     -> [BTypes.CursorLocation Types.Name]
     -> Maybe (BTypes.CursorLocation Types.Name)
+defaultChooseCursor _ [] = Nothing
 defaultChooseCursor s [l] = Just l
 defaultChooseCursor s ls  = Types.chooseCursor (getScreenData s) s ls
 

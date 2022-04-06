@@ -60,10 +60,21 @@ data ScreenName
 
 -- todo stuff
 
+data Priority
+    = NoPriority
+    | LowPriority
+    | MediumPriority
+    | HighPriority
+    | UrgentPriority
+    deriving (Show, Eq, Ord, Enum, Bounded, Generic)
+
+instance Aeson.ToJSON Priority where
+instance Aeson.FromJSON Priority where
+
 data Todo = Todo
     { _todoName     :: Text
     , _todoDone     :: Bool
-    , _todoPriority :: Int
+    , _todoPriority :: Priority
     } deriving (Eq, Generic)
 
 MicrolensTH.makeLenses '' Todo
@@ -130,7 +141,7 @@ data Command
     | HelpCommand
     | NewTodoCommand
         { newTodoName     :: Text
-        , newTodoPriority :: Int
+        , newTodoPriority :: Priority
         } 
     | MarkTodoCommand
         { markTodoName :: Text
@@ -151,8 +162,8 @@ getWidgetFocus s = getFocusUnsafe $ s ^. widgetFocusRing
 
 -- attribute names -------------------------------------------------------------
 
-superHighPriorityAttr :: BAttr.AttrName
-superHighPriorityAttr = BAttr.attrName "super high"
+urgentPriorityAttr :: BAttr.AttrName
+urgentPriorityAttr = BAttr.attrName "urgent"
 
 highPriorityAttr :: BAttr.AttrName
 highPriorityAttr = BAttr.attrName "high"

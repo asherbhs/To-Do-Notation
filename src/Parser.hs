@@ -39,33 +39,58 @@ myLexer = Lexer.lexeme spaceConsumer
     spaceConsumer = Parsec.lookAhead Parsec.eof <|> CharParsec.space1
 
 wordLexer :: Parser Text
-wordLexer = myLexer 
+wordLexer = myLexer
     (
         Parsec.try
             (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
-        <|> 
+        <|>
             quote *> takeWhileNot (== '\"') <* quote
             -- Parsec.between can also be used, but tbh I prefer how this looks
     ) <?> "a word (optionally multiple in \"double quotes\")"
-  where 
+  where
     quote = CharParsec.char '\"'
     takeWhileNot p = Parsec.takeWhile1P Nothing (not . p)
 
 intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
 
-priorityLexer :: Parser Int
-priorityLexer = myLexer 
+priorityLexer :: Parser Types.Priority
+priorityLexer = myLexer
     (
-        Lexer.decimal <|> Parsec.choice
-            [ 2 <$ (CharParsec.string' "high" <|> CharParsec.string' "h")
-            , 1 <$ (CharParsec.string' "medium" <|> CharParsec.string' "m")
-            , 0 <$ (CharParsec.string' "low" <|> CharParsec.string' "l")
+        Parsec.choice
+            [ Types.UrgentPriority <$ Parsec.choice (map CharParsec.string'
+                [ "urgent"
+                , "u"
+                , "4"
+                ])
+            , Types.HighPriority <$ Parsec.choice (map CharParsec.string'
+                [ "high"
+                , "hi"
+                , "h"
+                , "3"
+                ])
+            , Types.MediumPriority <$ Parsec.choice (map CharParsec.string'
+                [ "medium"
+                , "m"
+                , "2"
+                ])
+            , Types.LowPriority <$ Parsec.choice (map CharParsec.string'
+                [ "low"
+                , "lo"
+                , "l"
+                , "1"
+                ])
+            , Types.NoPriority <$ Parsec.choice (map CharParsec.string'
+                [ "none"
+                , "no"
+                , "n"
+                , "0"
+                ])
             ]
-    ) <?> "a priority (e.g. \"high\", \"h\", 2)"
+    ) <?> "a priority (e.g. \"high\")"
 
 boolParser :: Parser Bool
-boolParser = Parsec.choice 
+boolParser = Parsec.choice
     [ True  <$ CharParsec.string' "true"
     , False <$ CharParsec.string' "false"
     ]
@@ -91,10 +116,10 @@ commandParser = do
         Types.MarkTodoCommandName -> parseMarkTodo
 
 commandNameParser :: Parser Types.CommandName
-commandNameParser = myLexer 
+commandNameParser = myLexer
     (
         Parsec.choice
-            [ Types.QuitCommandName 
+            [ Types.QuitCommandName
                 <$ (CharParsec.string' "quit" <|> CharParsec.string' "q")
             , Types.HelpCommandName     <$ CharParsec.string' "help"
             , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
@@ -107,7 +132,7 @@ parseNewTodo = do
     n <- wordLexer
     p <- Parsec.optional priorityLexer
     Parsec.eof
-    return $ Types.NewTodoCommand n $ Maybe.fromMaybe 1 p
+    return $ Types.NewTodoCommand n $ Maybe.fromMaybe Types.NoPriority p
 
 parseMarkTodo :: Parser Types.Command
 parseMarkTodo = do

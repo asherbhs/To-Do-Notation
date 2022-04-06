@@ -57,17 +57,17 @@ draw s =
   where
     drawTodo _ t 
         = case t ^. Types.todoPriority of
-            2 -> BWCore.withAttr Types.highPriorityAttr 
-                $ BWCore.str " ! "
-            1 -> BWCore.withAttr Types.mediumPriorityAttr
-                $ BWCore.str " : "
-            0 -> BWCore.withAttr Types.lowPriorityAttr
-                $ BWCore.str " . "
-            n -> BWCore.withAttr Types.superHighPriorityAttr 
-                $ BWCore.str 
-                $ " " ++ show n ++ " "
+            Types.UrgentPriority -> 
+                BWCore.withAttr Types.urgentPriorityAttr $ BWCore.str " * "
+            Types.HighPriority -> 
+                BWCore.withAttr Types.highPriorityAttr      $ BWCore.str " ! "
+            Types.MediumPriority -> 
+                BWCore.withAttr Types.mediumPriorityAttr    $ BWCore.str " : "
+            Types.LowPriority -> 
+                BWCore.withAttr Types.lowPriorityAttr       $ BWCore.str " . "
+            Types.NoPriority -> BWCore.str " - "
+
         <+> BWCore.str (show t)
-    width = 2
 
 chooseCursor
     :: Types.AppState

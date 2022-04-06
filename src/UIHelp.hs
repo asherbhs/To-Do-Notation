@@ -65,6 +65,6 @@ screenBox s ws
     screenLabel = case Types.getScreen s of
         Types.TodoScreen  -> "To-do Notation"
         Types.HabitScreen -> "Habit Tracker"
-        _           -> "..."
+        _                 -> "..."
     errorMessage = s ^. Types.errorMessage
     hlim = 72.0
