@@ -151,6 +151,9 @@ getWidgetFocus s = getFocusUnsafe $ s ^. widgetFocusRing
 
 -- attribute names -------------------------------------------------------------
 
+superHighPriorityAttr :: BAttr.AttrName
+superHighPriorityAttr = BAttr.attrName "super high"
+
 highPriorityAttr :: BAttr.AttrName
 highPriorityAttr = BAttr.attrName "high"
 

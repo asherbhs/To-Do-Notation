@@ -98,6 +98,9 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
     [ ( BWList.listSelectedFocusedAttr
       , defaultStandout
       )
+    , ( Types.superHighPriorityAttr 
+      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightMagenta
+      )
     , ( Types.highPriorityAttr
       , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightRed
       )

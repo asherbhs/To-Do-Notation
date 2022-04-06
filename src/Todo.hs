@@ -63,7 +63,9 @@ draw s =
                 $ BWCore.str " : "
             0 -> BWCore.withAttr Types.lowPriorityAttr
                 $ BWCore.str " . "
-            n -> BWCore.str $ " " ++ show n ++ " "
+            n -> BWCore.withAttr Types.superHighPriorityAttr 
+                $ BWCore.str 
+                $ " " ++ show n ++ " "
         <+> BWCore.str (show t)
     width = 2
 
