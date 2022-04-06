@@ -23,7 +23,7 @@ import qualified Data.Text as Text
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as ByteString
 
-import Data.Sequence (Seq)
+import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 
 -- ui
@@ -98,13 +98,13 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
       , defaultStandout
       )
     , ( Types.highPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.red
+      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightRed
       )
     , ( Types.mediumPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.yellow
+      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightYellow
       )
     , ( Types.lowPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.green
+      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightGreen
       )
     ]
   where
@@ -123,33 +123,103 @@ screenHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 screenHandleEvent s = Types.handleEvent (getScreenData s) s
 
+defaultCommandPrompt :: Text -> BWEdit.Editor Text Types.Name
+defaultCommandPrompt = BWEdit.editorText Types.CommandPrompt (Just 1)
+
+emptyCommandPrompt :: BWEdit.Editor Text Types.Name
+emptyCommandPrompt = defaultCommandPrompt ""
+
 commandPromptHandleEvent
     :: Types.AppState
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 commandPromptHandleEvent s (BTypes.VtyEvent (VtyEvents.EvKey VtyEvents.KEnter []))
-    = BMain.continue
-    $ case cmd of
-        Left e  -> s & Types.errorMessage .~ e
-        Right c -> 
-            Types.handleCommand (getScreenData s) s c
-            & Types.errorMessage .~ ""
+    | Text.null cmdText = BMain.continue $ s & Types.errorMessage .~ ""
+    | cmd == Right Types.QuitCommand = BMain.halt s
+    | otherwise = BMain.continue
+        $ case cmd of
+            Left e -> s & Types.errorMessage .~ e
+            Right c -> defaultHandleCommand s c
+        & Types.previousCommands %~ (cmdText <|)
+        & Types.commandPrompt .~ emptyCommandPrompt
+  where
+      cmd = Parser.parseCommand cmdText
+      cmdText = head $ BWEdit.getEditContents $ s ^. Types.commandPrompt
 
-    & Types.commandPrompt
-    .~ emptyCommandPrompt
-  where 
-    cmd = Parser.parseCommand
-        $ head 
-        $ BWEdit.getEditContents 
-        $ s ^. Types.commandPrompt
+commandPromptHandleEvent s (BTypes.VtyEvent e) =
+    case e of
+        VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue
+            $ s
+            & Types.previousCommandIndex
+            %~ (\i -> min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
 
-commandPromptHandleEvent s (BTypes.VtyEvent e) = do
-    newEditor <- BWEdit.handleEditorEvent e $ s ^. Types.commandPrompt
-    BMain.continue 
-        $ s
-        & Types.commandPrompt
-        .~ newEditor
+            & (\s' -> 
+                (
+                    Types.commandPrompt .~ 
+                        if s' ^. Types.previousCommandIndex == -1 
+                        then emptyCommandPrompt
+                        else defaultCommandPrompt 
+                            (
+                                Seq.index
+                                (s' ^. Types.previousCommands)
+                                (s' ^. Types.previousCommandIndex)
+                            )
+                )
+                s'
+            )
+        VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue
+            $ s
+            & Types.previousCommandIndex
+            %~ (\i -> max (i - 1) (-1))
+
+            & Types.commandPrompt
+            .~ if s ^. Types.previousCommandIndex == -1 
+                then emptyCommandPrompt
+                else defaultCommandPrompt 
+                    (
+                        Seq.index
+                        (s ^. Types.previousCommands)
+                        (s ^. Types.previousCommandIndex)
+                    )
+        _ -> do
+            newEditor <- BWEdit.handleEditorEvent e $ s ^. Types.commandPrompt
+            BMain.continue
+                $ s
+                & Types.commandPrompt
+                .~ newEditor
 commandPromptHandleEvent s e = screenHandleEvent s e
+
+defaultHandleCommand
+    :: Types.AppState
+    -> Types.Command
+    -> Types.AppState
+defaultHandleCommand s Types.HelpCommand = s & Types.errorMessage .~
+    "HELP:\n\
+    \\n\
+    \Press TAB to shift focus\n\
+    \Press SHIFT + TAB to shift screen\n"
+    `Text.append` case Types.getScreen s of
+        Types.TodoScreen ->
+            "\n\
+            \In the to-do list:\n\
+            \    Press BACKSPACE to delete a to-do\n\
+            \    Press SPACE to mark (or unmark) a to-do as done\n\
+            \\n\
+            \Commands:\n\
+            \    new todo [NAME] [PRIORITY]\n\
+            \        [NAME]     - the name of the new to-do\n\
+            \        [PRIORITY] - the to-do's urgency\n\
+            \                     0, \"low\" or \"l\" for low priority\n\
+            \                     1, \"medium\" or \"m\" for medium priority\n\
+            \                     2, \"high\" or \"h\" for high priority\n\
+            \                     greater integers are also allowed\n"
+        _ -> "\n"
+    `Text.append`
+        "    quit\n\
+        \\n\
+        \In commands, enclose an argument in \"double quotes\" to include whitespace"
+defaultHandleCommand s c = Types.handleCommand (getScreenData s) s c
+    & Types.errorMessage .~ ""
 
 defaultHandleEvent
     :: Types.AppState
@@ -186,27 +256,23 @@ app = BMain.App
     , BMain.appAttrMap      = defAttrMap
     }
 
-emptyCommandPrompt :: BWEdit.Editor Text Types.Name
-emptyCommandPrompt = BWEdit.editorText 
-    Types.CommandPrompt
-    (Just 1)
-    ""
-
 ui :: IO ()
 ui = void $ do
     json <- ByteString.readFile "todos"
 
     finalState <- BMain.defaultMain app Types.AppState
         { Types._debug = "[DEBUG]"
-        , Types._widgetFocusRing 
+        , Types._widgetFocusRing
             = BFocus.focusRingModify (insertR Types.CommandPrompt)
-            $ Types.focusRing 
+            $ Types.focusRing
             $ screenMap ! Types.TodoScreen
         , Types._screenFocusRing = BFocus.focusRing
             [ Types.TodoScreen
             , Types.HabitScreen
             ]
         , Types._commandPrompt = emptyCommandPrompt
+        , Types._previousCommands = Seq.empty
+        , Types._previousCommandIndex = -1
         , Types._errorMessage = ""
         , Types._todoState = Types.TodoState
             { Types._todoList = BWList.list

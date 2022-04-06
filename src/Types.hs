@@ -86,12 +86,14 @@ data TodoState = TodoState
 MicrolensTH.makeLenses '' TodoState
 
 data AppState = AppState
-    { _debug           :: String
-    , _widgetFocusRing :: BFocus.FocusRing Name
-    , _screenFocusRing :: BFocus.FocusRing ScreenName
-    , _commandPrompt   :: BWEdit.Editor Text Name
-    , _errorMessage    :: Text
-    , _todoState       :: TodoState
+    { _debug                :: String
+    , _widgetFocusRing      :: BFocus.FocusRing Name
+    , _screenFocusRing      :: BFocus.FocusRing ScreenName
+    , _commandPrompt        :: BWEdit.Editor Text Name
+    , _previousCommands     :: Seq Text
+    , _previousCommandIndex :: Int
+    , _errorMessage         :: Text
+    , _todoState            :: TodoState
     }
 
 MicrolensTH.makeLenses '' AppState
@@ -118,11 +120,15 @@ data ScreenData = ScreenData
 -- commands
 
 data CommandName
-    = NewTodoCommandName
+    = QuitCommandName
+    | HelpCommandName
+    | NewTodoCommandName
     | MarkTodoCommandName
 
 data Command
-    = NewTodoCommand
+    = QuitCommand
+    | HelpCommand
+    | NewTodoCommand
         { newTodoName     :: Text
         , newTodoPriority :: Int
         } 
@@ -130,7 +136,7 @@ data Command
         { markTodoName :: Text
         , markTodoDone :: Bool
         } 
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- utility functions -----------------------------------------------------------
 

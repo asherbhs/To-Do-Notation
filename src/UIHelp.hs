@@ -29,6 +29,11 @@ import Lens.Micro
 import qualified Lens.Micro    as Microlens
 import qualified Lens.Micro.TH as MicrolensTH
 
+--------------------------------------------------------------------------------
+
+approxFontRatio :: Double
+approxFontRatio = 0.45
+
 screenBox
     :: Types.AppState
     -> [BTypes.Widget Types.Name]
@@ -36,11 +41,11 @@ screenBox
 screenBox s ws 
     = BWCentre.center
     $ BWCore.withBorderStyle BWBStyle.unicodeBold
-    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") -- s ^. Types.debug
-    $ BWCore.padTopBottom 1
-    $ BWCore.padLeftRight 3
-    $ BWCore.hLimit 72
-    $ BWCore.vLimit 32
+    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ show (s ^. Types.previousCommandIndex) ++ " " ++ show (s ^. Types.previousCommands) ++ " ") -- s ^. Types.debug
+    $ BWCore.padLeftRight 2
+    $ BWCore.padTopBottom (round $ approxFontRatio * 2.0)
+    $ BWCore.hLimit 50
+    $ BWCore.vLimit (round $ approxFontRatio * 50)
     $ BWCore.vBox
     $ ws ++ map (BWCore.padTop $ BTypes.Pad 1)
         [ BWCore.withBorderStyle BWBStyle.unicode BWBorder.hBorder

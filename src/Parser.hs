@@ -80,14 +80,23 @@ commandParser :: Parser Types.Command
 commandParser = do
     commandName <- commandNameParser
     case commandName of
+        Types.QuitCommandName     -> return Types.QuitCommand
+        Types.HelpCommandName     -> return Types.HelpCommand
         Types.NewTodoCommandName  -> parseNewTodo
         Types.MarkTodoCommandName -> parseMarkTodo
 
 commandNameParser :: Parser Types.CommandName
-commandNameParser = myLexer $ Parsec.choice
-    [ Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
-    , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
-    ]
+commandNameParser = myLexer 
+    (
+        Parsec.choice
+            [ Types.QuitCommandName 
+                <$ (CharParsec.string' "quit" <|> CharParsec.string' "q")
+            , Types.HelpCommandName     <$ CharParsec.string' "help"
+            , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
+            , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
+            ]
+        <?> "a valid command"
+    )
 
 parseNewTodo :: Parser Types.Command
 parseNewTodo = do
