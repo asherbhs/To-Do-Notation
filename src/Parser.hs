@@ -39,25 +39,30 @@ myLexer = Lexer.lexeme spaceConsumer
     spaceConsumer = Parsec.lookAhead Parsec.eof <|> CharParsec.space1
 
 wordLexer :: Parser Text
-wordLexer = myLexer $
-    Parsec.try
-        (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
-    <|> 
-        quote *> takeWhileNot (== '\"') <* quote
-        -- Parsec.between can also be used, but tbh I prefer how this looks
+wordLexer = myLexer 
+    (
+        Parsec.try
+            (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
+        <|> 
+            quote *> takeWhileNot (== '\"') <* quote
+            -- Parsec.between can also be used, but tbh I prefer how this looks
+    ) <?> "a word (optionally multiple in \"double quotes\")"
   where 
     quote = CharParsec.char '\"'
-    takeWhileNot p = Parsec.takeWhileP Nothing (not . p)
+    takeWhileNot p = Parsec.takeWhile1P Nothing (not . p)
 
 intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
 
 priorityLexer :: Parser Int
-priorityLexer = myLexer $ Lexer.decimal <|> Parsec.choice
-    [ 2 <$ (CharParsec.string' "h" <|> CharParsec.string' "high")
-    , 1 <$ (CharParsec.string' "m" <|> CharParsec.string' "medium")
-    , 0 <$ (CharParsec.string' "l" <|> CharParsec.string' "low")
-    ]
+priorityLexer = myLexer 
+    (
+        Lexer.decimal <|> Parsec.choice
+            [ 2 <$ (CharParsec.string' "h" <|> CharParsec.string' "high")
+            , 1 <$ (CharParsec.string' "m" <|> CharParsec.string' "medium")
+            , 0 <$ (CharParsec.string' "l" <|> CharParsec.string' "low")
+            ]
+    ) <?> "a priority (e.g. \"high\", \"h\", 2)"
 
 boolParser :: Parser Bool
 boolParser = Parsec.choice 
@@ -95,8 +100,7 @@ commandNameParser = myLexer
             , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
             , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
             ]
-        <?> "a valid command"
-    )
+    ) <?> "a valid command"
 
 parseNewTodo :: Parser Types.Command
 parseNewTodo = do

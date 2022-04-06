@@ -41,11 +41,11 @@ screenBox
 screenBox s ws 
     = BWCentre.center
     $ BWCore.withBorderStyle BWBStyle.unicodeBold
-    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ show (s ^. Types.previousCommandIndex) ++ " " ++ show (s ^. Types.previousCommands) ++ " ") -- s ^. Types.debug
+    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") -- s ^. Types.debug
     $ BWCore.padLeftRight 2
     $ BWCore.padTopBottom (round $ approxFontRatio * 2.0)
-    $ BWCore.hLimit 50
-    $ BWCore.vLimit (round $ approxFontRatio * 50)
+    $ BWCore.hLimit (round hlim)
+    $ BWCore.vLimit (round $ approxFontRatio * hlim)
     $ BWCore.vBox
     $ ws ++ map (BWCore.padTop $ BTypes.Pad 1)
         [ BWCore.withBorderStyle BWBStyle.unicode BWBorder.hBorder
@@ -64,3 +64,4 @@ screenBox s ws
         Types.HabitScreen -> "Habit Tracker"
         _           -> "..."
     errorMessage = s ^. Types.errorMessage
+    hlim = 72.0
