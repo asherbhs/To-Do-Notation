@@ -3,6 +3,8 @@
 
 module Types where
 
+
+
 -- imports ---------------------------------------------------------------------
 
 -- language features
@@ -39,9 +41,12 @@ import qualified Data.Aeson as Aeson
 -- misc
 import qualified Data.Maybe as Maybe
 
+
+
 -- new data types --------------------------------------------------------------
 
 -- name types
+
 type AppEvent = ()
 
 data Name
@@ -57,6 +62,8 @@ data ScreenName
     | ScheduleScreen
     | TimelineScreen
     deriving (Eq, Ord, Show)
+
+
 
 -- todo stuff
 
@@ -88,7 +95,10 @@ instance Show Todo where
         : Text.unpack (t ^. todoName)
         -- ++ " " ++ show (t ^. todoPriority)
 
+
+
 -- app state
+
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo
     , _todoFocusRing :: BFocus.FocusRing Name
@@ -128,6 +138,8 @@ data ScreenData = ScreenData
     , focusRing :: BFocus.FocusRing Name
     }
 
+
+
 -- commands
 
 data CommandName
@@ -149,6 +161,8 @@ data Command
         } 
     deriving (Eq, Show)
 
+
+
 -- utility functions -----------------------------------------------------------
 
 getFocusUnsafe :: BFocus.FocusRing n -> n
@@ -159,6 +173,8 @@ getScreen s = getFocusUnsafe $ s ^. screenFocusRing
 
 getWidgetFocus :: AppState -> Name
 getWidgetFocus s = getFocusUnsafe $ s ^. widgetFocusRing
+
+
 
 -- attribute names -------------------------------------------------------------
 

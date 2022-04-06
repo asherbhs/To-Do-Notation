@@ -2,6 +2,8 @@
 
 module Parser where
 
+
+
 -- imports ---------------------------------------------------------------------
 
 -- internal
@@ -19,11 +21,17 @@ import qualified Data.Maybe as Maybe
 import Data.Void (Void)
 import Data.Char (isSpace)
 
+
+
 -- types -----------------------------------------------------------------------
 
 type Parser = Parsec.Parsec Void Text
 
--- parsing functions -----------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+-- tests
 
 splitCommand :: Text -> Either Text [Text]
 splitCommand t = case Parsec.parse splitCommandP "" t of
@@ -33,10 +41,29 @@ splitCommand t = case Parsec.parse splitCommandP "" t of
 splitCommandP :: Parser [Text]
 splitCommandP = CharParsec.space *> Parsec.manyTill wordLexer Parsec.eof
 
+
+
+-- helpers
+
 myLexer :: Parser a -> Parser a
-myLexer = Lexer.lexeme spaceConsumer
-  where
-    spaceConsumer = Parsec.lookAhead Parsec.eof <|> CharParsec.space1
+myLexer = Lexer.lexeme $ Parsec.lookAhead Parsec.eof <|> CharParsec.space1
+
+stringChoice :: [Text] -> Parser Text
+stringChoice = Parsec.choice . map CharParsec.string'
+
+
+
+-- basic parsers
+
+boolParser :: Parser Bool
+boolParser = Parsec.choice
+    [ True  <$ CharParsec.string' "true"
+    , False <$ CharParsec.string' "false"
+    ]
+
+
+
+-- basic lexers
 
 wordLexer :: Parser Text
 wordLexer = myLexer
@@ -51,56 +78,58 @@ wordLexer = myLexer
 intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
 
+boolLexer :: Parser Bool
+boolLexer = myLexer boolParser
+
+
+
+-- specified lexers
+
 priorityLexer :: Parser Types.Priority
 priorityLexer = myLexer (Parsec.choice
-    [ Types.UrgentPriority <$ Parsec.choice (map CharParsec.string'
+    [ Types.UrgentPriority <$ stringChoice
         [ "urgent"
         , "urg"
         , "u"
         , "4"
         , "*"
-        ])
-    , Types.HighPriority <$ Parsec.choice (map CharParsec.string'
+        ]
+    , Types.HighPriority <$ stringChoice
         [ "high"
         , "hi"
         , "h"
         , "3"
         , "!"
-        ])
-    , Types.MediumPriority <$ Parsec.choice (map CharParsec.string'
+        ]
+    , Types.MediumPriority <$ stringChoice
         [ "medium"
         , "med"
         , "m"
         , "2"
         , ":"
-        ])
-    , Types.LowPriority <$ Parsec.choice (map CharParsec.string'
+        ]
+    , Types.LowPriority <$ stringChoice
         [ "low"
         , "lo"
         , "l"
         , "1"
         , "."
-        ])
-    , Types.NoPriority <$ Parsec.choice (map CharParsec.string'
+        ]
+    , Types.NoPriority <$ stringChoice
         [ "none"
         , "no"
         , "n"
         , "0"
         , "-"
-        ])
+        ]
     ]) <?> "a priority (e.g. \"high\")"
-
-boolParser :: Parser Bool
-boolParser = Parsec.choice
-    [ True  <$ CharParsec.string' "true"
-    , False <$ CharParsec.string' "false"
-    ]
-
-boolLexer :: Parser Bool
-boolLexer = myLexer boolParser
 
 doneLexer :: Parser Bool
 doneLexer = myLexer $ boolParser <|> True <$ CharParsec.string' "done"
+
+
+
+-- command parsing
 
 parseCommand :: Text -> Either Text Types.Command
 parseCommand t = case Parsec.parse commandParser "" t of
@@ -118,11 +147,10 @@ commandParser = do
 
 commandNameParser :: Parser Types.CommandName
 commandNameParser = myLexer (Parsec.choice
-    [ Types.QuitCommandName
-        <$ (CharParsec.string' "quit" <|> CharParsec.string' "q")
-    , Types.HelpCommandName     <$ CharParsec.string' "help"
-    , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
-    , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
+    [ Types.QuitCommandName    <$ stringChoice ["quit", "q"]
+    , Types.HelpCommandName    <$ stringChoice ["help", "h"]
+    , Types.NewTodoCommandName <$ stringChoice ["new todo", "nt"]
+    -- , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
     ]) <?> "a valid command"
 
 parseNewTodo :: Parser Types.Command

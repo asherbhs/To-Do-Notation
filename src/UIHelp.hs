@@ -2,6 +2,10 @@
 
 module UIHelp where
 
+
+
+-- imports ---------------------------------------------------------------------
+
 -- internal
 import qualified Types
 
@@ -29,10 +33,15 @@ import Lens.Micro
 import qualified Lens.Micro    as Microlens
 import qualified Lens.Micro.TH as MicrolensTH
 
+
+
 --------------------------------------------------------------------------------
 
 approxFontRatio :: Double
 approxFontRatio = 0.45
+
+innerWidth :: Double
+innerWidth = 80.0
 
 screenBox
     :: Types.AppState
@@ -40,16 +49,13 @@ screenBox
     -> BTypes.Widget Types.Name
 screenBox s ws 
     = BWCentre.center
-    $ BWCore.withBorderStyle BWBStyle.unicodeBold
-    $ BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") 
-        -- screenLabel
-        -- s ^. Types.debug
-        -- show (s ^. Types.previousCommandIndex) ++ " " ++ show (s ^. Types.previousCommands)
-    $ BWCore.padLeftRight 2
-    $ BWCore.padTopBottom (round $ approxFontRatio * 2.0)
-    $ BWCore.hLimit (round hlim)
-    $ BWCore.vLimit (round $ approxFontRatio * hlim)
-    $ BWCore.vBox
+    . BWCore.withBorderStyle BWBStyle.unicodeBold
+    . BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") 
+    . BWCore.padLeftRight 2
+    . BWCore.padTopBottom (round $ approxFontRatio * 2.0)
+    . BWCore.hLimit (round innerWidth)
+    . BWCore.vLimit (round $ approxFontRatio * innerWidth)
+    . BWCore.vBox
     $ ws ++ map (BWCore.padTop $ BTypes.Pad 1)
         [ BWCore.withBorderStyle BWBStyle.unicode BWBorder.hBorder
         , if errorMessage == "" then 
@@ -67,4 +73,3 @@ screenBox s ws
         Types.HabitScreen -> "Habit Tracker"
         _                 -> "..."
     errorMessage = s ^. Types.errorMessage
-    hlim = 72.0

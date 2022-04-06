@@ -2,9 +2,11 @@
 
 module UI where
 
+
+
 -- imports ---------------------------------------------------------------------
 
--- internal --------------------------------------------------------------------
+-- internal
 import qualified Types
 import qualified Parser
 import qualified Todo
@@ -65,7 +67,9 @@ import qualified Data.Bool  as Bool
 import Data.CircularList (insertR)
 import Data.Text.Zipper (gotoEOL)
 
--- stuff used  -----------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
 
 screenMap :: Map Types.ScreenName Types.ScreenData
 screenMap = Map.fromList
@@ -152,24 +156,19 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
                     & Types.previousCommands %~ (cmdText <|)
                     & Types.commandPrompt .~ emptyCommandPrompt
 
-        VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue
-            $ s & Types.previousCommandIndex
-            %~ (\i -> min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
+        VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue $ s 
+            & Types.previousCommandIndex %~ (\i -> 
+                min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
 
             & loadOldCommand
 
-        VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue
-            $ s & Types.previousCommandIndex
-            %~ (\i -> max (i - 1) (-1))
-
+        VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue $ s 
+            & Types.previousCommandIndex %~ (\i -> max (i - 1) (-1))
             & loadOldCommand
 
         _ -> do
             newEditor <- BWEdit.handleEditorEvent e $ s ^. Types.commandPrompt
-            BMain.continue
-                $ s
-                & Types.commandPrompt
-                .~ newEditor
+            BMain.continue $ s & Types.commandPrompt .~ newEditor
   where
     loadOldCommand s' = s'
         & Types.commandPrompt .~
@@ -193,6 +192,7 @@ defaultHandleCommand s Types.HelpCommand = s & Types.errorMessage .~
     \\n\
     \Press TAB to shift focus\n\
     \Press SHIFT + TAB to shift screen\n"
+  -- 0---------1---------2---------3---------4---------5---------6---------7---------
     `Text.append` case Types.getScreen s of
         Types.TodoScreen ->
             "\n\
@@ -205,13 +205,17 @@ defaultHandleCommand s Types.HelpCommand = s & Types.errorMessage .~
             \        [NAME]     - the name of the new to-do\n\
             \        [PRIORITY] - optional, the to-do's urgency\n\
             \                     \"low\", \"medium\", \"high\", or \"urgent\"\n"
+          -- 0---------1---------2---------3---------4---------5---------6---------7---------
         _ -> "\n"
     `Text.append`
         "    quit\n\
         \\n\
-        \In commands, enclose an argument in \"double quotes\" to include whitespace"
-defaultHandleCommand s c = Types.handleCommand (getScreenData s) s c
-    & Types.errorMessage .~ ""
+        \To include whitespace in a string argument, enclose it in \"double quotes\""
+      -- 0---------1---------2---------3---------4---------5---------6---------7---------
+defaultHandleCommand s c = Types.handleCommand 
+    (getScreenData s) 
+    (s & Types.errorMessage .~ "") 
+    c
 
 defaultHandleEvent
     :: Types.AppState
@@ -219,17 +223,17 @@ defaultHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 defaultHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey (VtyEvents.KChar 'c') [VtyEvents.MCtrl] -> BMain.halt s
-    VtyEvents.EvKey (VtyEvents.KChar '\t') [] -> BMain.continue
-        $ s
-        & Types.widgetFocusRing
-        %~ BFocus.focusNext
-    VtyEvents.EvKey VtyEvents.KBackTab [] -> BMain.continue
-        $ s
-        & Types.screenFocusRing
-        %~ BFocus.focusNext
-    _ -> if Types.getWidgetFocus s == Types.CommandPrompt
-         then commandPromptHandleEvent s (BTypes.VtyEvent e)
-         else screenHandleEvent        s (BTypes.VtyEvent e)
+
+    VtyEvents.EvKey (VtyEvents.KChar '\t') [] -> BMain.continue $ s
+        & Types.widgetFocusRing %~ BFocus.focusNext
+
+    VtyEvents.EvKey VtyEvents.KBackTab [] -> BMain.continue $ s
+        & Types.screenFocusRing %~ BFocus.focusNext
+
+    _ -> if Types.getWidgetFocus s == Types.CommandPrompt then 
+            commandPromptHandleEvent s (BTypes.VtyEvent e)
+        else 
+            screenHandleEvent s (BTypes.VtyEvent e)
 
 defaultHandleEvent s e = screenHandleEvent s e
 
@@ -241,9 +245,9 @@ debugHandleEvent s e = defaultHandleEvent (s & Types.debug .~ show e) e
 
 app :: BMain.App Types.AppState Types.AppEvent Types.Name
 app = BMain.App
-    { BMain.appDraw         = \s -> Types.draw         (getScreenData s) s
+    { BMain.appDraw         = \s -> Types.draw (getScreenData s) s
     , BMain.appChooseCursor = defaultChooseCursor
-    , BMain.appHandleEvent  = debugHandleEvent
+    , BMain.appHandleEvent  = defaultHandleEvent
     , BMain.appStartEvent   = return
     , BMain.appAttrMap      = defAttrMap
     }
@@ -269,17 +273,9 @@ ui = void $ do
         , Types._todoState = Types.TodoState
             { Types._todoList = BWList.list
                 Types.TodoList
-                (
-                Maybe.fromMaybe
+                (Maybe.fromMaybe
                     Seq.empty
-                    $ Aeson.decode json
-                -- Seq.fromList
-                --     [ Types.Todo "rip out todo form" True 0
-                --     , Types.Todo "put a command prompt in the wrapper box" False 0
-                --     , Types.Todo "bind commands to functionality" False 0
-                --     , Types.Todo "show and order by priority" False 0
-                --     ]
-                )
+                    (Aeson.decode json))
                 1
             , Types._todoFocusRing = BFocus.focusRing [Types.TodoList]
             }

@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Todo where
 
+
+
 -- imports ---------------------------------------------------------------------
 
 -- internal
@@ -42,6 +44,8 @@ import qualified Data.Sequence as Seq
 
 -- misc
 import qualified Data.Maybe as Maybe
+
+
 
 --------------------------------------------------------------------------------
 
@@ -106,12 +110,6 @@ handleEvent
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 handleEvent = todoListHandleEvent
--- handleEvent s (BTypes.VtyEvent e) = case e of
---     e -> case Types.getWidgetFocus s of
---         Types.TodoList -> todoListHandleEvent s (BTypes.VtyEvent e)
---         _              -> BMain.continue s
-
--- handleEvent s _ = BMain.continue s
 
 handleCommand
     :: Types.AppState 
