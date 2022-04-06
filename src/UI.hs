@@ -45,7 +45,8 @@ import qualified Graphics.Vty.Attributes.Color as VtyColour
 import qualified Graphics.Vty.Input.Events     as VtyEvents
 
 -- JSON
-import qualified Data.Aeson as Aeson
+import qualified Data.Aeson               as Aeson
+import qualified Data.Aeson.Encode.Pretty as AesonPretty
 
 -- microlens
 import Lens.Micro
@@ -292,6 +293,6 @@ ui = void $ do
         }
 
     ByteString.writeFile "todos"
-        $ Aeson.encode
+        $ AesonPretty.encodePretty
         $ BWList.listElements
         $ finalState ^. Types.todoState . Types.todoList

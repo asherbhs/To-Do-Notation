@@ -26,6 +26,7 @@ dependencies:
 - vty
 - text
 - aeson
+- aeson-pretty
 - bytestring
 - microlens
 - microlens-th

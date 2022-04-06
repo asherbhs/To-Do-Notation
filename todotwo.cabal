@@ -38,6 +38,7 @@ library
       src
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
     , brick
     , bytestring
@@ -60,6 +61,7 @@ executable todotwo-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Werror -Wall
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
     , brick
     , bytestring
@@ -84,6 +86,7 @@ test-suite todotwo-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
     , brick
     , bytestring
