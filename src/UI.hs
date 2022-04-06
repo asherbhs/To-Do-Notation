@@ -208,11 +208,8 @@ defaultHandleCommand s Types.HelpCommand = s & Types.errorMessage .~
             \Commands:\n\
             \    new todo [NAME] [PRIORITY]\n\
             \        [NAME]     - the name of the new to-do\n\
-            \        [PRIORITY] - the to-do's urgency\n\
-            \                     0, \"low\" or \"l\" for low priority\n\
-            \                     1, \"medium\" or \"m\" for medium priority\n\
-            \                     2, \"high\" or \"h\" for high priority\n\
-            \                     greater integers are also allowed\n"
+            \        [PRIORITY] - optional, the to-do's urgency\n\
+            \                     \"low\", \"medium\", \"high\", or \"urgent\"\n"
         _ -> "\n"
     `Text.append`
         "    quit\n\

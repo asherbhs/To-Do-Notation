@@ -60,31 +60,38 @@ priorityLexer = myLexer
         Parsec.choice
             [ Types.UrgentPriority <$ Parsec.choice (map CharParsec.string'
                 [ "urgent"
+                , "urg"
                 , "u"
                 , "4"
+                , "*"
                 ])
             , Types.HighPriority <$ Parsec.choice (map CharParsec.string'
                 [ "high"
                 , "hi"
                 , "h"
                 , "3"
+                , "!"
                 ])
             , Types.MediumPriority <$ Parsec.choice (map CharParsec.string'
                 [ "medium"
+                , "med"
                 , "m"
                 , "2"
+                , ":"
                 ])
             , Types.LowPriority <$ Parsec.choice (map CharParsec.string'
                 [ "low"
                 , "lo"
                 , "l"
                 , "1"
+                , "."
                 ])
             , Types.NoPriority <$ Parsec.choice (map CharParsec.string'
                 [ "none"
                 , "no"
                 , "n"
                 , "0"
+                , "-"
                 ])
             ]
     ) <?> "a priority (e.g. \"high\")"
