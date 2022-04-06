@@ -40,12 +40,9 @@ myLexer = Lexer.lexeme spaceConsumer
 
 wordLexer :: Parser Text
 wordLexer = myLexer
-    (
-        Parsec.try
-            (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
-        <|>
-            quote *> takeWhileNot (== '\"') <* quote
-            -- Parsec.between can also be used, but tbh I prefer how this looks
+    (Parsec.try (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
+    <|> quote *> takeWhileNot (== '\"') <* quote
+    -- Parsec.between can also be used, but tbh I prefer how this looks
     ) <?> "a word (optionally multiple in \"double quotes\")"
   where
     quote = CharParsec.char '\"'
@@ -55,46 +52,43 @@ intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
 
 priorityLexer :: Parser Types.Priority
-priorityLexer = myLexer
-    (
-        Parsec.choice
-            [ Types.UrgentPriority <$ Parsec.choice (map CharParsec.string'
-                [ "urgent"
-                , "urg"
-                , "u"
-                , "4"
-                , "*"
-                ])
-            , Types.HighPriority <$ Parsec.choice (map CharParsec.string'
-                [ "high"
-                , "hi"
-                , "h"
-                , "3"
-                , "!"
-                ])
-            , Types.MediumPriority <$ Parsec.choice (map CharParsec.string'
-                [ "medium"
-                , "med"
-                , "m"
-                , "2"
-                , ":"
-                ])
-            , Types.LowPriority <$ Parsec.choice (map CharParsec.string'
-                [ "low"
-                , "lo"
-                , "l"
-                , "1"
-                , "."
-                ])
-            , Types.NoPriority <$ Parsec.choice (map CharParsec.string'
-                [ "none"
-                , "no"
-                , "n"
-                , "0"
-                , "-"
-                ])
-            ]
-    ) <?> "a priority (e.g. \"high\")"
+priorityLexer = myLexer (Parsec.choice
+    [ Types.UrgentPriority <$ Parsec.choice (map CharParsec.string'
+        [ "urgent"
+        , "urg"
+        , "u"
+        , "4"
+        , "*"
+        ])
+    , Types.HighPriority <$ Parsec.choice (map CharParsec.string'
+        [ "high"
+        , "hi"
+        , "h"
+        , "3"
+        , "!"
+        ])
+    , Types.MediumPriority <$ Parsec.choice (map CharParsec.string'
+        [ "medium"
+        , "med"
+        , "m"
+        , "2"
+        , ":"
+        ])
+    , Types.LowPriority <$ Parsec.choice (map CharParsec.string'
+        [ "low"
+        , "lo"
+        , "l"
+        , "1"
+        , "."
+        ])
+    , Types.NoPriority <$ Parsec.choice (map CharParsec.string'
+        [ "none"
+        , "no"
+        , "n"
+        , "0"
+        , "-"
+        ])
+    ]) <?> "a priority (e.g. \"high\")"
 
 boolParser :: Parser Bool
 boolParser = Parsec.choice
@@ -123,16 +117,13 @@ commandParser = do
         Types.MarkTodoCommandName -> parseMarkTodo
 
 commandNameParser :: Parser Types.CommandName
-commandNameParser = myLexer
-    (
-        Parsec.choice
-            [ Types.QuitCommandName
-                <$ (CharParsec.string' "quit" <|> CharParsec.string' "q")
-            , Types.HelpCommandName     <$ CharParsec.string' "help"
-            , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
-            , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
-            ]
-    ) <?> "a valid command"
+commandNameParser = myLexer (Parsec.choice
+    [ Types.QuitCommandName
+        <$ (CharParsec.string' "quit" <|> CharParsec.string' "q")
+    , Types.HelpCommandName     <$ CharParsec.string' "help"
+    , Types.NewTodoCommandName  <$ CharParsec.string' "new todo"
+    , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
+    ]) <?> "a valid command"
 
 parseNewTodo :: Parser Types.Command
 parseNewTodo = do

@@ -46,14 +46,11 @@ import qualified Data.Maybe as Maybe
 --------------------------------------------------------------------------------
 
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
-draw s =
-    [ UIHelp.screenBox s
-        [ BWList.renderList
-            drawTodo
-            (Types.getWidgetFocus s == Types.TodoList)
-            (s ^. Types.todoState . Types.todoList)
-        ]
-    ]
+draw s = [UIHelp.screenBox s
+    [BWList.renderList
+        drawTodo
+        (Types.getWidgetFocus s == Types.TodoList)
+        (s ^. Types.todoState . Types.todoList)]]
   where
     drawTodo _ t 
         = case t ^. Types.todoPriority of
@@ -66,7 +63,6 @@ draw s =
             Types.LowPriority -> 
                 BWCore.withAttr Types.lowPriorityAttr       $ BWCore.str " . "
             Types.NoPriority -> BWCore.str " - "
-
         <+> BWCore.str (show t)
 
 chooseCursor
@@ -122,15 +118,13 @@ handleCommand
     -> Types.Command
     -> Types.AppState
 handleCommand s (Types.NewTodoCommand n p)
-    = s
-    & Types.todoState . Types.todoList . BWList.listElementsL 
+    = s & Types.todoState . Types.todoList . BWList.listElementsL 
     %~ \l -> Seq.insertAt 
-            (
-                Maybe.fromMaybe 
-                    (Seq.length l) 
-                    (Seq.findIndexL (\t -> t ^. Types.todoPriority < p) l)
-            ) 
-            (Types.Todo n False p) l
+        (Maybe.fromMaybe 
+            (Seq.length l) 
+            (Seq.findIndexL (\t -> t ^. Types.todoPriority < p) l)) 
+        (Types.Todo n False p) 
+        l
 
 handleCommand s (Types.MarkTodoCommand n d) = undefined
 handleCommand s _ = s

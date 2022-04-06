@@ -90,9 +90,7 @@ screenMap = Map.fromList
     ]
 
 getScreenData :: Types.AppState -> Types.ScreenData
-getScreenData = (!) screenMap . Types.getScreen
-    --Maybe.fromJust $ Map.lookup (Types.getScreen s) screenMap
-    --screenMap ! Types.getScreen s
+getScreenData s = screenMap ! Types.getScreen s
 
 defAttrMap :: Types.AppState -> BAttr.AttrMap
 defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
@@ -139,33 +137,33 @@ commandPromptHandleEvent
     :: Types.AppState
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
-commandPromptHandleEvent s (BTypes.VtyEvent (VtyEvents.EvKey VtyEvents.KEnter []))
-    | Text.null cmdText = BMain.continue $ s & Types.errorMessage .~ ""
-    | cmd == Right Types.QuitCommand = BMain.halt s
-    | otherwise = BMain.continue
-        $ case cmd of
-            Left e -> s & Types.errorMessage .~ e
-            Right c -> defaultHandleCommand s c
-        & Types.previousCommands %~ (cmdText <|)
-        & Types.commandPrompt .~ emptyCommandPrompt
-  where
-      cmd = Parser.parseCommand cmdText
-      cmdText = head $ BWEdit.getEditContents $ s ^. Types.commandPrompt
-
 commandPromptHandleEvent s (BTypes.VtyEvent e) =
     case e of
+        VtyEvents.EvKey VtyEvents.KEnter [] ->
+            if Text.null cmdText then 
+                BMain.continue $ s & Types.errorMessage .~ ""
+            else if cmd == Right Types.QuitCommand then
+                BMain.halt s
+            else
+                BMain.continue
+                    $ case cmd of
+                        Left e -> s & Types.errorMessage .~ e
+                        Right c -> defaultHandleCommand s c
+                    & Types.previousCommands %~ (cmdText <|)
+                    & Types.commandPrompt .~ emptyCommandPrompt
+
         VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue
-            $ s
-            & Types.previousCommandIndex
+            $ s & Types.previousCommandIndex
             %~ (\i -> min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
 
             & loadOldCommand
+
         VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue
-            $ s
-            & Types.previousCommandIndex
+            $ s & Types.previousCommandIndex
             %~ (\i -> max (i - 1) (-1))
 
             & loadOldCommand
+
         _ -> do
             newEditor <- BWEdit.handleEditorEvent e $ s ^. Types.commandPrompt
             BMain.continue
@@ -173,20 +171,17 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
                 & Types.commandPrompt
                 .~ newEditor
   where
-    loadOldCommand s' = (
-            Types.commandPrompt .~
-                if s' ^. Types.previousCommandIndex == -1
-                then emptyCommandPrompt
-                else defaultCommandPrompt
-                    (
-                        Seq.index
-                        (s' ^. Types.previousCommands)
-                        (s' ^. Types.previousCommandIndex)
-                    )
-            & BWEdit.editContentsL
-            %~ gotoEOL
-        )
-        s'
+    loadOldCommand s' = s'
+        & Types.commandPrompt .~
+            if s' ^. Types.previousCommandIndex == -1
+            then emptyCommandPrompt
+            else defaultCommandPrompt (Seq.index
+                    (s' ^. Types.previousCommands)
+                    (s' ^. Types.previousCommandIndex))
+                & BWEdit.editContentsL %~ gotoEOL
+
+    cmd = Parser.parseCommand cmdText
+    cmdText = head $ BWEdit.getEditContents $ s ^. Types.commandPrompt
 commandPromptHandleEvent s e = screenHandleEvent s e
 
 defaultHandleCommand
