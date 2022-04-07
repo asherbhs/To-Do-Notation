@@ -8,24 +8,16 @@ module Todo where
 -- internal
 import qualified Types
 import qualified UIHelp
-import qualified Util
 
 -- brick
 import qualified Brick.Main    as BMain
 import qualified Brick.Types   as BTypes
-import qualified Brick.AttrMap as BAttr
 import qualified Brick.Focus   as BFocus
-import           Brick.Forms ((@@=))
-import qualified Brick.Forms   as BForms
 
 import           Brick.Widgets.Core ((<+>))
 import qualified Brick.Widgets.Core         as BWCore
-import qualified Brick.Widgets.Center       as BWCentre
-import qualified Brick.Widgets.Border       as BWBorder
-import qualified Brick.Widgets.Border.Style as BWBStyle
 import qualified Brick.Widgets.List         as BWList
 
-import qualified Graphics.Vty.Attributes   as VtyAttr
 import qualified Graphics.Vty.Input.Events as VtyEvents
 
 -- microlens
@@ -35,11 +27,8 @@ import Lens.Micro
     , (%~) -- over
     , (.~) -- set
     )
-import qualified Lens.Micro    as Microlens
-import qualified Lens.Micro.TH as MicrolensTH
 
 -- sequence
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 
 -- misc
@@ -93,7 +82,7 @@ todoListHandleEvent s (BTypes.VtyEvent e) = case e of
             Just i  -> BWList.listRemove i l
             Nothing -> l
 
-    e -> do
+    _ -> do
         newTodoList <- BWList.handleListEventVi
             BWList.handleListEvent
             e
@@ -123,8 +112,6 @@ handleCommand s (Types.NewTodoCommand n p)
             (Seq.findIndexL (\t -> t ^. Types.todoPriority < p) l)) 
         (Types.Todo n False p) 
         l
-
-handleCommand s (Types.MarkTodoCommand n d) = undefined
 handleCommand s _ = s
 
 focusRing :: BFocus.FocusRing Types.Name
