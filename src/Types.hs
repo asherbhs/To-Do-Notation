@@ -15,24 +15,16 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 
 import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
 
 -- brick
 import qualified Brick.Types        as BTypes
 import qualified Brick.Widgets.List as BWList
 import qualified Brick.Widgets.Edit as BWEdit
-import qualified Brick.Forms        as BForms
 import qualified Brick.Focus        as BFocus
 import qualified Brick.AttrMap      as BAttr
 
 -- microlens
-import Lens.Micro
-    ( (&) -- flipped $
-    , (^.) -- view
-    , (%~) -- over
-    , (.~) -- set
-    )
-import qualified Lens.Micro    as Microlens
+import Lens.Micro ((^.))
 import qualified Lens.Micro.TH as MicrolensTH
 
 -- aeson

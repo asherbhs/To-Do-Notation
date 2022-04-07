@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiWayIf #-}
 
 module UI where
 
@@ -13,7 +14,7 @@ import qualified Todo
 import qualified Habit
 
 -- language features
-import GHC.Generics
+import GHC.Generics ()
 
 -- data types
 import Data.Map (Map, (!))
@@ -22,10 +23,9 @@ import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as Text
 
-import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as ByteString
 
-import Data.Sequence (Seq, (<|))
+import Data.Sequence ((<|))
 import qualified Data.Sequence as Seq
 
 -- ui
@@ -34,11 +34,6 @@ import qualified Brick.Types   as BTypes
 import qualified Brick.AttrMap as BAttr
 import qualified Brick.Focus   as BFocus
 
-import           Brick.Widgets.Core ((<+>))
-import qualified Brick.Widgets.Core         as BWCore
-import qualified Brick.Widgets.Center       as BWCentre
-import qualified Brick.Widgets.Border       as BWBorder
-import qualified Brick.Widgets.Border.Style as BWBStyle
 import qualified Brick.Widgets.List         as BWList
 import qualified Brick.Widgets.Edit         as BWEdit
 
@@ -52,18 +47,15 @@ import qualified Data.Aeson.Encode.Pretty as AesonPretty
 
 -- microlens
 import Lens.Micro
-    ( (&) -- flipped $
+    ( (&)  -- flipped $ for piping
     , (^.) -- view
     , (%~) -- over
     , (.~) -- set
     )
-import qualified Lens.Micro    as Microlens
-import qualified Lens.Micro.TH as MicrolensTH
 
 -- odds and ends
 import Control.Monad (void)
 import qualified Data.Maybe as Maybe
-import qualified Data.Bool  as Bool
 import Data.CircularList (insertR)
 import Data.Text.Zipper (gotoEOL)
 
@@ -122,7 +114,7 @@ defaultChooseCursor
     -> [BTypes.CursorLocation Types.Name]
     -> Maybe (BTypes.CursorLocation Types.Name)
 defaultChooseCursor _ [] = Nothing
-defaultChooseCursor s [l] = Just l
+defaultChooseCursor _ [l] = Just l
 defaultChooseCursor s ls  = Types.chooseCursor (getScreenData s) s ls
 
 screenHandleEvent
@@ -143,23 +135,19 @@ commandPromptHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 commandPromptHandleEvent s (BTypes.VtyEvent e) =
     case e of
-        VtyEvents.EvKey VtyEvents.KEnter [] ->
-            if Text.null cmdText then 
-                BMain.continue $ s & Types.errorMessage .~ ""
-            else if cmd == Right Types.QuitCommand then
-                BMain.halt s
-            else
-                BMain.continue
-                    $ case cmd of
-                        Left e -> s & Types.errorMessage .~ e
-                        Right c -> defaultHandleCommand s c
-                    & Types.previousCommands %~ (cmdText <|)
-                    & Types.commandPrompt .~ emptyCommandPrompt
+        VtyEvents.EvKey VtyEvents.KEnter [] -> if 
+            | Text.null cmdText -> BMain.continue $ s & Types.errorMessage .~ ""
+            | cmd == Right Types.QuitCommand -> BMain.halt s
+            | otherwise -> BMain.continue
+                $ case cmd of
+                    Left err -> s & Types.errorMessage .~ err
+                    Right c -> defaultHandleCommand s c
+                & Types.previousCommands %~ (cmdText <|)
+                & Types.commandPrompt .~ emptyCommandPrompt
 
         VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue $ s 
             & Types.previousCommandIndex %~ (\i -> 
                 min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
-
             & loadOldCommand
 
         VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue $ s 
@@ -172,7 +160,7 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
   where
     loadOldCommand s' = s'
         & Types.commandPrompt .~
-            if s' ^. Types.previousCommandIndex == -1
+            if s' ^. Types.previousCommandIndex == -1 
             then emptyCommandPrompt
             else defaultCommandPrompt (Seq.index
                     (s' ^. Types.previousCommands)
@@ -230,10 +218,9 @@ defaultHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey VtyEvents.KBackTab [] -> BMain.continue $ s
         & Types.screenFocusRing %~ BFocus.focusNext
 
-    _ -> if Types.getWidgetFocus s == Types.CommandPrompt then 
-            commandPromptHandleEvent s (BTypes.VtyEvent e)
-        else 
-            screenHandleEvent s (BTypes.VtyEvent e)
+    _ -> if Types.getWidgetFocus s == Types.CommandPrompt 
+        then commandPromptHandleEvent s (BTypes.VtyEvent e)
+        else screenHandleEvent        s (BTypes.VtyEvent e)
 
 defaultHandleEvent s e = screenHandleEvent s e
 

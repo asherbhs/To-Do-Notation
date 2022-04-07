@@ -36,6 +36,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
 
 executables:
   todotwo-exe:
@@ -45,7 +47,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Werror
     - -Wall
     dependencies:
     - todotwo
