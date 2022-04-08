@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Types where
 
@@ -59,16 +60,22 @@ data ScreenName
 
 -- todo stuff
 
-data Priority
-    = NoPriority
-    | LowPriority
-    | MediumPriority
-    | HighPriority
-    | UrgentPriority
-    deriving (Show, Eq, Ord, Enum, Bounded, Generic)
+type Priority = Int
 
-instance Aeson.ToJSON Priority where
-instance Aeson.FromJSON Priority where
+pattern UrgentPriority :: Priority
+pattern UrgentPriority = 4
+
+pattern HighPriority :: Priority
+pattern HighPriority = 3
+
+pattern MediumPriority :: Priority
+pattern MediumPriority = 2
+
+pattern LowPriority :: Priority
+pattern LowPriority = 1
+
+pattern NoPriority :: Priority
+pattern NoPriority = 0
 
 data Todo = Todo
     { _todoName     :: Text
@@ -169,6 +176,9 @@ getWidgetFocus s = getFocusUnsafe $ s ^. widgetFocusRing
 
 
 -- attribute names -------------------------------------------------------------
+
+extraPriorityAttr :: BAttr.AttrName
+extraPriorityAttr = BAttr.attrName "extra"
 
 urgentPriorityAttr :: BAttr.AttrName
 urgentPriorityAttr = BAttr.attrName "urgent"

@@ -8,6 +8,7 @@ module Todo where
 -- internal
 import qualified Types
 import qualified UIHelp
+import qualified Util
 
 -- brick
 import qualified Brick.Main    as BMain
@@ -56,6 +57,11 @@ draw s = [UIHelp.screenBox s
             Types.LowPriority -> 
                 BWCore.withAttr Types.lowPriorityAttr       $ BWCore.str " . "
             Types.NoPriority -> BWCore.str " - "
+            n -> show n 
+                & Util.padLeft 2 ' ' 
+                & Util.padRight 3 ' ' 
+                & BWCore.str 
+                & BWCore.withAttr Types.extraPriorityAttr
         <+> BWCore.str (show t)
 
 chooseCursor

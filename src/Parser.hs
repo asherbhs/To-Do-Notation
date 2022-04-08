@@ -86,7 +86,7 @@ boolLexer = myLexer boolParser
 -- specified lexers
 
 priorityLexer :: Parser Types.Priority
-priorityLexer = myLexer (Parsec.choice
+priorityLexer = myLexer $ Lexer.decimal <|> Parsec.choice
     [ Types.UrgentPriority <$ stringChoice
         [ "urgent"
         , "urg"
@@ -122,7 +122,7 @@ priorityLexer = myLexer (Parsec.choice
         , "0"
         , "-"
         ]
-    ]) <?> "a priority (e.g. \"high\")"
+    ]
 
 doneLexer :: Parser Bool
 doneLexer = myLexer $ boolParser <|> True <$ CharParsec.string' "done"

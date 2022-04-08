@@ -93,21 +93,25 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
     [ ( BWList.listSelectedFocusedAttr
       , defaultStandout
       )
+    , ( Types.extraPriorityAttr 
+      , withTextColour VtyColour.brightBlue
+      )
     , ( Types.urgentPriorityAttr 
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightMagenta
+      , withTextColour VtyColour.brightMagenta
       )
     , ( Types.highPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightRed
+      , withTextColour VtyColour.brightRed
       )
     , ( Types.mediumPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightYellow
+      , withTextColour VtyColour.brightYellow
       )
     , ( Types.lowPriorityAttr
-      , VtyAttr.defAttr `VtyAttr.withForeColor` VtyColour.brightGreen
+      , withTextColour VtyColour.brightGreen
       )
     ]
   where
     defaultStandout = VtyAttr.withStyle VtyAttr.defAttr VtyAttr.standout
+    withTextColour = VtyAttr.withForeColor VtyAttr.defAttr
 
 defaultChooseCursor
     :: Types.AppState
