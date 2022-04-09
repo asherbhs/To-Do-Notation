@@ -53,11 +53,15 @@ import Lens.Micro
     , (.~) -- set
     )
 
+-- time
+import Data.Time as Time
+
 -- odds and ends
 import Control.Monad (void)
 import qualified Data.Maybe as Maybe
 import Data.CircularList (insertR)
 import Data.Text.Zipper (gotoEOL)
+import Data.List.Index (imap)
 
 
 
@@ -93,10 +97,10 @@ defAttrMap _ = BAttr.attrMap VtyAttr.defAttr
     [ ( BWList.listSelectedFocusedAttr
       , defaultStandout
       )
-    , ( Types.extraPriorityAttr 
+    , ( Types.extraPriorityAttr
       , withTextColour VtyColour.brightBlue
       )
-    , ( Types.urgentPriorityAttr 
+    , ( Types.urgentPriorityAttr
       , withTextColour VtyColour.brightMagenta
       )
     , ( Types.highPriorityAttr
@@ -139,7 +143,7 @@ commandPromptHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 commandPromptHandleEvent s (BTypes.VtyEvent e) =
     case e of
-        VtyEvents.EvKey VtyEvents.KEnter [] -> if 
+        VtyEvents.EvKey VtyEvents.KEnter [] -> if
             | Text.null cmdText -> BMain.continue $ s & Types.errorMessage .~ ""
             | cmd == Right Types.QuitCommand -> BMain.halt s
             | otherwise -> BMain.continue
@@ -149,12 +153,12 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
                 & Types.previousCommands %~ (cmdText <|)
                 & Types.commandPrompt .~ emptyCommandPrompt
 
-        VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue $ s 
-            & Types.previousCommandIndex %~ (\i -> 
+        VtyEvents.EvKey VtyEvents.KUp [] -> BMain.continue $ s
+            & Types.previousCommandIndex %~ (\i ->
                 min (i + 1) (Seq.length (s ^. Types.previousCommands) - 1))
             & loadOldCommand
 
-        VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue $ s 
+        VtyEvents.EvKey VtyEvents.KDown [] -> BMain.continue $ s
             & Types.previousCommandIndex %~ (\i -> max (i - 1) (-1))
             & loadOldCommand
 
@@ -164,7 +168,7 @@ commandPromptHandleEvent s (BTypes.VtyEvent e) =
   where
     loadOldCommand s' = s'
         & Types.commandPrompt .~
-            if s' ^. Types.previousCommandIndex == -1 
+            if s' ^. Types.previousCommandIndex == -1
             then emptyCommandPrompt
             else defaultCommandPrompt (Seq.index
                     (s' ^. Types.previousCommands)
@@ -204,9 +208,9 @@ defaultHandleCommand s Types.HelpCommand = s & Types.errorMessage .~
         \\n\
         \To include whitespace in a string argument, enclose it in \"double quotes\""
       -- 0---------1---------2---------3---------4---------5---------6---------7---------
-defaultHandleCommand s c = Types.handleCommand 
-    (getScreenData s) 
-    (s & Types.errorMessage .~ "") 
+defaultHandleCommand s c = Types.handleCommand
+    (getScreenData s)
+    (s & Types.errorMessage .~ "")
     c
 
 defaultHandleEvent
@@ -222,7 +226,13 @@ defaultHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey VtyEvents.KBackTab [] -> BMain.continue $ s
         & Types.screenFocusRing %~ BFocus.focusNext
 
-    _ -> if Types.getWidgetFocus s == Types.CommandPrompt 
+        & (\s' -> s' & Types.widgetFocusRing
+            .~  BFocus.focusRingModify
+                (insertR Types.CommandPrompt)
+                (Types.focusRing $ screenMap ! Types.getScreen s')
+        )
+
+    _ -> if Types.getWidgetFocus s == Types.CommandPrompt
         then commandPromptHandleEvent s (BTypes.VtyEvent e)
         else screenHandleEvent        s (BTypes.VtyEvent e)
 
@@ -232,20 +242,22 @@ debugHandleEvent
     :: Types.AppState
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
-debugHandleEvent s e = defaultHandleEvent (s & Types.debug .~ show e) e
+debugHandleEvent s e = defaultHandleEvent (s & Types.debug .~ show (Types.getWidgetFocus s)) e
 
 app :: BMain.App Types.AppState Types.AppEvent Types.Name
 app = BMain.App
     { BMain.appDraw         = \s -> Types.draw (getScreenData s) s
     , BMain.appChooseCursor = defaultChooseCursor
-    , BMain.appHandleEvent  = defaultHandleEvent
+    , BMain.appHandleEvent  = debugHandleEvent
     , BMain.appStartEvent   = return
     , BMain.appAttrMap      = defAttrMap
     }
 
 ui :: IO ()
 ui = void $ do
-    json <- ByteString.readFile "todos"
+    currentTime <- Time.getCurrentTime
+    jsonTodos <- ByteString.readFile "todos"
+    jsonHabits <- ByteString.readFile "habits"
 
     finalState <- BMain.defaultMain app Types.AppState
         { Types._debug = "[DEBUG]"
@@ -257,18 +269,27 @@ ui = void $ do
             [ Types.TodoScreen
             , Types.HabitScreen
             ]
-        , Types._commandPrompt = emptyCommandPrompt
-        , Types._previousCommands = Seq.empty
+        , Types._commandPrompt        = emptyCommandPrompt
+        , Types._previousCommands     = Seq.empty
         , Types._previousCommandIndex = -1
-        , Types._errorMessage = ""
+        , Types._errorMessage         = ""
+        , Types._today                = Time.utctDay currentTime
         , Types._todoState = Types.TodoState
             { Types._todoList = BWList.list
                 Types.TodoList
                 (Maybe.fromMaybe
                     Seq.empty
-                    (Aeson.decode json))
+                    (Aeson.decode jsonTodos))
                 1
             , Types._todoFocusRing = BFocus.focusRing [Types.TodoList]
+            }
+        , Types._habitState = Types.HabitState
+            { Types._habitList = imap
+                (\i h -> (h, Habit.habitDaysList h (Time.utctDay currentTime) i))
+                (Maybe.fromMaybe
+                    []
+                    (Aeson.decode jsonHabits))
+            , Types._habitFocus = 0
             }
         }
 
@@ -276,3 +297,7 @@ ui = void $ do
         $ AesonPretty.encodePretty
         $ BWList.listElements
         $ finalState ^. Types.todoState . Types.todoList
+
+    ByteString.writeFile "habits"
+        $ AesonPretty.encodePretty
+        $ map fst (finalState ^. Types.habitState . Types.habitList)

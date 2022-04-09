@@ -9,13 +9,18 @@ module Types where
 -- imports ---------------------------------------------------------------------
 
 -- language features
-import GHC.Generics ( Generic )
+import GHC.Generics (Generic)
+
+-- internal
+import qualified Util
 
 -- data types
 import Data.Text (Text)
 import qualified Data.Text as Text
 
 import Data.Sequence (Seq)
+
+import Data.Set (Set)
 
 -- brick
 import qualified Brick.Types        as BTypes
@@ -31,10 +36,17 @@ import qualified Lens.Micro.TH as MicrolensTH
 -- aeson
 import qualified Data.Aeson as Aeson
 
+-- time
+import qualified Data.Time as Time
+
 -- misc
 import qualified Data.Maybe as Maybe
 
 
+
+-- instances -------------------------------------------------------------------
+instance BWList.Splittable [] where
+    splitAt n xs = (take n xs, drop n xs)
 
 -- new data types --------------------------------------------------------------
 
@@ -46,7 +58,8 @@ data Name
     = None
     | CommandPrompt
     | TodoList
-    | HabitList
+    | HabitLists
+    | HabitList Int
     deriving (Eq, Ord, Show)
 
 data ScreenName
@@ -60,6 +73,12 @@ data ScreenName
 
 -- todo stuff
 
+{-
+priorities are just ints, with larger meaning a higher priority
+
+five aliases are defined and are given special rendering in other parts of the
+code, but the user can provide an arbitrary int and it can still be stored
+-}
 type Priority = Int
 
 pattern UrgentPriority :: Priority
@@ -94,16 +113,76 @@ instance Show Todo where
         : Text.unpack (t ^. todoName)
         -- ++ " " ++ show (t ^. todoPriority)
 
-
-
--- app state
-
 data TodoState = TodoState
     { _todoList      :: BWList.GenericList Name Seq Todo
     , _todoFocusRing :: BFocus.FocusRing Name
     }
 
 MicrolensTH.makeLenses '' TodoState
+
+
+
+-- habit stuff
+data HabitRepeat
+    = EveryDay
+    | EveryOtherDay
+    | EveryWeekday
+    | EveryMonday
+    | EveryTuesday
+    | EveryWednesday
+    | EveryThursday
+    | EveryFriday
+    | EverySaturday
+    | EverySunday
+    deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON HabitRepeat where
+instance Aeson.FromJSON HabitRepeat where
+
+data HabitDay = HabitDay
+    { _habitDay  :: Time.Day
+    , _habitDue  :: Bool
+    , _habitDone :: Bool
+    }
+
+MicrolensTH.makeLenses '' HabitDay
+
+instance Show HabitDay where
+    show (HabitDay day due done)
+        = Util.padLeft 12 ' ' $ show d ++ "/" ++ show m ++ " " ++
+            [ head $ show $ Time.dayOfWeek day
+            , ' '
+            , if due then '[' else ' '
+            , if done then '*' else ' '
+            , if due then ']' else ' '
+            , ' '
+            ]
+      where
+        (_, m, d) = Time.toGregorian day
+
+
+data Habit = Habit
+    { _habitName      :: Text
+    , _habitStart     :: Time.Day
+    , _habitRepeat    :: [HabitRepeat]
+    , _habitCompleted :: Set Time.Day
+    } deriving (Eq, Show, Generic)
+
+MicrolensTH.makeLenses '' Habit
+
+instance Aeson.ToJSON Habit where
+instance Aeson.FromJSON Habit where
+
+data HabitState = HabitState
+    { _habitList  :: [(Habit, BWList.GenericList Name [] HabitDay)]
+    , _habitFocus :: Int
+    }
+
+MicrolensTH.makeLenses '' HabitState
+
+
+
+-- app state
 
 data AppState = AppState
     { _debug                :: String
@@ -113,7 +192,9 @@ data AppState = AppState
     , _previousCommands     :: Seq Text
     , _previousCommandIndex :: Int
     , _errorMessage         :: Text
+    , _today                :: Time.Day
     , _todoState            :: TodoState
+    , _habitState           :: HabitState
     }
 
 MicrolensTH.makeLenses '' AppState
@@ -131,7 +212,7 @@ data ScreenData = ScreenData
         -> BTypes.BrickEvent Name AppEvent
         -> BTypes.EventM Name (BTypes.Next AppState)
     , handleCommand
-        :: AppState 
+        :: AppState
         -> Command
         -> AppState
     , focusRing :: BFocus.FocusRing Name
@@ -145,7 +226,7 @@ data CommandName
     = QuitCommandName
     | HelpCommandName
     | NewTodoCommandName
-    | MarkTodoCommandName
+    | NewHabitCommandName
 
 data Command
     = QuitCommand
@@ -153,11 +234,11 @@ data Command
     | NewTodoCommand
         { newTodoName     :: Text
         , newTodoPriority :: Priority
-        } 
-    | MarkTodoCommand
-        { markTodoName :: Text
-        , markTodoDone :: Bool
-        } 
+        }
+    | NewHabitCommand
+        { newHabitName   :: Text
+        , newHabitRepeat :: [HabitRepeat]
+        }
     deriving (Eq, Show)
 
 

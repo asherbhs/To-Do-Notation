@@ -33,6 +33,8 @@ dependencies:
 - megaparsec
 - data-clist
 - text-zipper
+- time
+- ilist
 
 library:
   source-dirs: src
@@ -48,6 +50,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     - -Wall
+    - -O
     dependencies:
     - todotwo
 

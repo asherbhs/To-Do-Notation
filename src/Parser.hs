@@ -61,19 +61,23 @@ boolParser = Parsec.choice
     , False <$ CharParsec.string' "false"
     ]
 
+wordParser :: Parser Text
+wordParser = Parsec.label "a word (optionally multiple in \"double quotes\")" 
+    $ Parsec.try 
+        (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
+    <|> Parsec.try
+        (quote *> takeWhileNot (== '\"') <* quote)
+    -- Parsec.between can also be used, but tbh I prefer how this looks
+  where
+    quote = CharParsec.char '\"'
+    takeWhileNot p = Parsec.takeWhile1P Nothing (not . p)
+
 
 
 -- basic lexers
 
 wordLexer :: Parser Text
-wordLexer = myLexer
-    (Parsec.try (Parsec.notFollowedBy quote *> takeWhileNot isSpace)
-    <|> quote *> takeWhileNot (== '\"') <* quote
-    -- Parsec.between can also be used, but tbh I prefer how this looks
-    ) <?> "a word (optionally multiple in \"double quotes\")"
-  where
-    quote = CharParsec.char '\"'
-    takeWhileNot p = Parsec.takeWhile1P Nothing (not . p)
+wordLexer = myLexer wordParser
 
 intLexer :: Parser Int
 intLexer = myLexer Lexer.decimal
@@ -86,43 +90,56 @@ boolLexer = myLexer boolParser
 -- specified lexers
 
 priorityLexer :: Parser Types.Priority
-priorityLexer = myLexer $ Lexer.decimal <|> Parsec.choice
-    [ Types.UrgentPriority <$ stringChoice
-        [ "urgent"
-        , "urg"
-        , "u"
-        , "4"
-        , "*"
+priorityLexer = Parsec.label "a valid priority (e.g. 'high', 'h', '3')"  
+    $ myLexer $ Lexer.decimal <|> Parsec.choice
+        [ Types.UrgentPriority <$ stringChoice
+            [ "urgent"
+            , "urg"
+            , "u"
+            , "*"
+            ]
+        , Types.HighPriority <$ stringChoice
+            [ "high"
+            , "hi"
+            , "h"
+            , "!"
+            ]
+        , Types.MediumPriority <$ stringChoice
+            [ "medium"
+            , "med"
+            , "m"
+            , ":"
+            ]
+        , Types.LowPriority <$ stringChoice
+            [ "low"
+            , "lo"
+            , "l"
+            , "."
+            ]
+        , Types.NoPriority <$ stringChoice
+            [ "none"
+            , "no"
+            , "n"
+            , "-"
+            ]
         ]
-    , Types.HighPriority <$ stringChoice
-        [ "high"
-        , "hi"
-        , "h"
-        , "3"
-        , "!"
+
+habitRepeatLexer :: Parser Types.HabitRepeat
+habitRepeatLexer = Parsec.label 
+    "how the habit should recur (e.g 'daily', 'every monday')"
+    $ myLexer 
+    $ Parsec.choice
+        [ Types.EveryDay       <$ stringChoice ["daily", "every day"]
+        , Types.EveryOtherDay  <$ CharParsec.string' "\"every other day\""
+        , Types.EveryWeekday   <$ CharParsec.string' "\"every weekday\""
+        , Types.EveryMonday    <$ CharParsec.string' "\"every monday\""
+        , Types.EveryTuesday   <$ CharParsec.string' "\"every tuesday\""
+        , Types.EveryWednesday <$ CharParsec.string' "\"every wednesday\""
+        , Types.EveryThursday  <$ CharParsec.string' "\"every thursday\""
+        , Types.EveryFriday    <$ CharParsec.string' "\"every friday\""
+        , Types.EverySaturday  <$ CharParsec.string' "\"every saturday\""
+        , Types.EverySunday    <$ CharParsec.string' "\"every sunday\""
         ]
-    , Types.MediumPriority <$ stringChoice
-        [ "medium"
-        , "med"
-        , "m"
-        , "2"
-        , ":"
-        ]
-    , Types.LowPriority <$ stringChoice
-        [ "low"
-        , "lo"
-        , "l"
-        , "1"
-        , "."
-        ]
-    , Types.NoPriority <$ stringChoice
-        [ "none"
-        , "no"
-        , "n"
-        , "0"
-        , "-"
-        ]
-    ]
 
 doneLexer :: Parser Bool
 doneLexer = myLexer $ boolParser <|> True <$ CharParsec.string' "done"
@@ -143,14 +160,14 @@ commandParser = do
         Types.QuitCommandName     -> return Types.QuitCommand
         Types.HelpCommandName     -> return Types.HelpCommand
         Types.NewTodoCommandName  -> parseNewTodo
-        Types.MarkTodoCommandName -> parseMarkTodo
+        Types.NewHabitCommandName -> parseNewHabit
 
 commandNameParser :: Parser Types.CommandName
 commandNameParser = myLexer (Parsec.choice
-    [ Types.QuitCommandName    <$ stringChoice ["quit", "q"]
-    , Types.HelpCommandName    <$ stringChoice ["help", "h"]
-    , Types.NewTodoCommandName <$ stringChoice ["new todo", "nt"]
-    -- , Types.MarkTodoCommandName <$ CharParsec.string' "mark todo"
+    [ Types.QuitCommandName     <$ stringChoice ["quit", "q"]
+    , Types.HelpCommandName     <$ stringChoice ["help", "h"]
+    , Types.NewTodoCommandName  <$ stringChoice ["new todo", "nt"]
+    , Types.NewHabitCommandName <$ stringChoice ["new habit", "nh"]
     ]) <?> "a valid command"
 
 parseNewTodo :: Parser Types.Command
@@ -160,9 +177,9 @@ parseNewTodo = do
     Parsec.eof
     return $ Types.NewTodoCommand n $ Maybe.fromMaybe Types.NoPriority p
 
-parseMarkTodo :: Parser Types.Command
-parseMarkTodo = do
+parseNewHabit :: Parser Types.Command
+parseNewHabit = do
     n <- wordLexer
-    d <- doneLexer
+    r <- Parsec.optional $ Parsec.some habitRepeatLexer
     Parsec.eof
-    return $ Types.MarkTodoCommand n d
+    return $ Types.NewHabitCommand n $ Maybe.fromMaybe [Types.EveryDay] r

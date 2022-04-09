@@ -8,7 +8,6 @@ module Todo where
 -- internal
 import qualified Types
 import qualified UIHelp
-import qualified Util
 
 -- brick
 import qualified Brick.Main    as BMain
@@ -50,18 +49,22 @@ draw s = [UIHelp.screenBox s
         = case t ^. Types.todoPriority of
             Types.UrgentPriority -> 
                 BWCore.withAttr Types.urgentPriorityAttr $ BWCore.str " * "
+
             Types.HighPriority -> 
-                BWCore.withAttr Types.highPriorityAttr      $ BWCore.str " ! "
+                BWCore.withAttr Types.highPriorityAttr   $ BWCore.str " ! "
+
             Types.MediumPriority -> 
-                BWCore.withAttr Types.mediumPriorityAttr    $ BWCore.str " : "
+                BWCore.withAttr Types.mediumPriorityAttr $ BWCore.str " : "
+
             Types.LowPriority -> 
-                BWCore.withAttr Types.lowPriorityAttr       $ BWCore.str " . "
+                BWCore.withAttr Types.lowPriorityAttr    $ BWCore.str " . "
+
             Types.NoPriority -> BWCore.str " - "
-            n -> show n 
-                & Util.padLeft 2 ' ' 
-                & Util.padRight 3 ' ' 
+
+            n -> " " ++ show n ++ " "
                 & BWCore.str 
                 & BWCore.withAttr Types.extraPriorityAttr
+
         <+> BWCore.str (show t)
 
 chooseCursor
@@ -76,14 +79,12 @@ todoListHandleEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 todoListHandleEvent s (BTypes.VtyEvent e) = case e of
     VtyEvents.EvKey (VtyEvents.KChar ' ') [] -> BMain.continue
-        $ s
-        & Types.todoState . Types.todoList
+        $ s & Types.todoState . Types.todoList
         %~ BWList.listModify
         (Types.todoDone %~ not)
 
     VtyEvents.EvKey VtyEvents.KBS [] -> BMain.continue
-        $ s
-        & Types.todoState . Types.todoList
+        $ s & Types.todoState . Types.todoList
         %~ \l -> case BWList.listSelected l of
             Just i  -> BWList.listRemove i l
             Nothing -> l
@@ -94,8 +95,7 @@ todoListHandleEvent s (BTypes.VtyEvent e) = case e of
             e
             (s ^. Types.todoState . Types.todoList)
         BMain.continue
-            $ s
-            & Types.todoState . Types.todoList
+            $ s & Types.todoState . Types.todoList
             .~ newTodoList
 
 todoListHandleEvent s _ = BMain.continue s
