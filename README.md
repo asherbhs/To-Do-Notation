@@ -1,4 +1,4 @@
-# todotwo
+# To-Do Notation
 ## differences from coursework
 - modularised architecture
 - priority system
