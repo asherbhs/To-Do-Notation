@@ -279,16 +279,20 @@ ui = void $ do
                 Types.TodoList
                 (Maybe.fromMaybe
                     Seq.empty
-                    (Aeson.decode jsonTodos))
+                    (Aeson.decode jsonTodos)
+                )
                 1
             , Types._todoFocusRing = BFocus.focusRing [Types.TodoList]
             }
         , Types._habitState = Types.HabitState
             { Types._habitList = imap
-                (\i h -> (h, Habit.habitDaysList h (Time.utctDay currentTime) i))
+                (\i h -> 
+                    (h, Habit.habitDaysList h (Time.utctDay currentTime) i)
+                )
                 (Maybe.fromMaybe
                     []
-                    (Aeson.decode jsonHabits))
+                    (Aeson.decode jsonHabits)
+                )
             , Types._habitFocus = 0
             }
         }

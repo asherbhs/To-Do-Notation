@@ -40,14 +40,23 @@ import qualified Data.Maybe as Maybe
 draw :: Types.AppState -> [BTypes.Widget Types.Name]
 draw s =
     [ UIHelp.screenBox s
-        [ BWCore.hBox $ intersperse gap (imap
+        [ BWCore.hBox
+            $ intersperse gap (imap
                 (\i (h, l) ->
                     BWCore.txt (h ^. Types.habitName)
                     <=>
+                    BWCore.str (
+                        "total: "
+                        ++ show (Set.size $ h ^. Types.habitCompleted)
+                        ++"\n "
+                    )
+                    <=>
                     BWCore.hLimit 12 (BWList.renderList
                         (\_ -> BWCore.str . show)
-                        (i == s ^. Types.habitState . Types.habitFocus
-                            && Types.getWidgetFocus s == Types.HabitLists)
+                        ((&&)
+                            (i == s ^. Types.habitState . Types.habitFocus)
+                            (Types.getWidgetFocus s == Types.HabitLists)
+                        )
                         l
                     )
                 )
@@ -69,20 +78,25 @@ handleEvent
     -> BTypes.BrickEvent Types.Name Types.AppEvent
     -> BTypes.EventM Types.Name (BTypes.Next Types.AppState)
 handleEvent s (BTypes.VtyEvent e) = case e of
-    VtyEvents.EvKey (VtyEvents.KChar ' ') [] -> BMain.continue $ s 
+    VtyEvents.EvKey (VtyEvents.KChar ' ') [] -> BMain.continue $ s
     -- hacked together indexing solution until I can figure out the lenses bug
     -- seriously this is disgusting but it works for now
         & Types.habitState . Types.habitList %~ (\l ->
             let (h, oldHabitDays) = l !! (s ^. Types.habitState . Types.habitFocus) in
                 setAt
                     (s ^. Types.habitState . Types.habitFocus)
-                    ( h & Types.habitCompleted %~ (\s -> let d = (snd $ Maybe.fromJust $ BWList.listSelectedElement oldHabitDays) ^. Types.habitDay in
-                            if Set.member d s
-                            then Set.delete d s
-                            else Set.insert d s
+                    ( h & Types.habitCompleted %~ (\set ->
+                          let
+                            d = snd (Maybe.fromJust
+                                    $ BWList.listSelectedElement oldHabitDays)
+                                ^. Types.habitDay
+                          in
+                            if Set.member d set
+                            then Set.delete d set
+                            else Set.insert d set
                         )
-                    , oldHabitDays & BWlist.listElementsL %~ modifyAt 
-                        (Maybe.fromJust $ oldHabitDays ^. BWList.listSelectedL) 
+                    , oldHabitDays & BWlist.listElementsL %~ modifyAt
+                        (Maybe.fromJust $ oldHabitDays ^. BWList.listSelectedL)
                         (Types.habitDone %~ not)
                     )
                     l
@@ -126,7 +140,7 @@ handleEvent s (BTypes.VtyEvent e) = case e of
 
 handleEvent s _ = BMain.continue s
 
-habitDaysList 
+habitDaysList
     :: Types.Habit
     -> Day
     -> Int
@@ -158,7 +172,7 @@ handleCommand
     :: Types.AppState
     -> Types.Command
     -> Types.AppState
-handleCommand s (Types.NewHabitCommand name repeats) = 
+handleCommand s (Types.NewHabitCommand name repeats) =
   let
     today :: Time.Day
     today = s ^. Types.today
@@ -172,7 +186,8 @@ handleCommand s (Types.NewHabitCommand name repeats) =
   in
     s & Types.habitState . Types.habitList %~ (++ [
             ( h
-            , habitDaysList h today (length $ s ^. Types.habitState . Types.habitList)
+            , habitDaysList h today
+                (length $ s ^. Types.habitState . Types.habitList)
             )
         ])
 

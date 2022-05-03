@@ -39,7 +39,7 @@ screenBox
 screenBox s ws 
     = BWCentre.center
     . BWCore.withBorderStyle BWBStyle.unicodeBold
-    . BWBorder.borderWithLabel (BWCore.str $ " " ++ s ^. Types.debug ++ " ") 
+    . BWBorder.borderWithLabel (BWCore.str $ " " ++ screenLabel ++ " ") 
     . BWCore.padLeftRight 2
     . BWCore.padTopBottom (round $ approxFontRatio * 2.0)
     . BWCore.hLimit (round innerWidth)
